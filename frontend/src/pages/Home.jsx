@@ -1,150 +1,176 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { createOrder, verifyPayment } from '../services/api';
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { fetchCampaigns } from '../services/api';
+import CampaignCard from '../components/CampaignCard';
 import Spinner from '../components/Spinner';
+import { ChevronRight, ShieldCheck, Heart, Users } from 'lucide-react';
 
 const Home = () => {
-    const [formData, setFormData] = useState({
-        donorName: '',
-        donorEmail: '',
-        amount: ''
-    });
-    const [loading, setLoading] = useState(false);
-    const navigate = useNavigate();
+    const [featured, setFeatured] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
-    };
-
-    const handleDonate = async (e) => {
-        e.preventDefault();
-
-        // Validation
-        if (!formData.donorName || !formData.donorEmail || !formData.amount) {
-            alert("Please fill all fields");
-            return;
-        }
-
-        if (isNaN(formData.amount) || formData.amount <= 0) {
-            alert("Please enter a valid amount");
-            return;
-        }
-
-        setLoading(true);
-
-        try {
-            // Step 1: Create Order on Backend
-            const order = await createOrder(formData);
-
-            // Step 2: Open Razorpay Checkout
-            const options = {
-                key: "rzp_test_SblOacDmUEmet0", // Same key as Phase 1
-                amount: order.amount,
-                currency: order.currency,
-                name: "Donation Project",
-                description: "Phase 2 Donation",
-                order_id: order.id,
-                handler: async function (response) {
-                    try {
-                        // Step 3: Verify Payment on Backend (CRITICAL)
-                        setLoading(true);
-                        const verification = await verifyPayment({
-                            razorpay_order_id: response.razorpay_order_id,
-                            razorpay_payment_id: response.razorpay_payment_id,
-                            razorpay_signature: response.razorpay_signature
-                        });
-
-                        if (verification.message === "Payment Verified Successfully") {
-                            navigate('/payment-success', { 
-                                state: { 
-                                    paymentId: response.razorpay_payment_id,
-                                    amount: formData.amount,
-                                    donationId: verification.donationId
-                                } 
-                            });
-                        }
-                    } catch (error) {
-                        console.error("Verification Error:", error);
-                        navigate('/payment-failure');
-                    } finally {
-                        setLoading(false);
-                    }
-                },
-                prefill: {
-                    name: formData.donorName,
-                    email: formData.donorEmail,
-                },
-                theme: {
-                    color: "#646cff",
-                },
-                modal: {
-                    ondismiss: function() {
-                        setLoading(false);
-                    }
-                }
-            };
-
-            const rzp1 = new window.Razorpay(options);
-            rzp1.open();
-
-        } catch (error) {
-            console.error("Order Creation Error:", error);
-            alert("Failed to initiate payment. Please try again.");
-            setLoading(false);
-        }
-    };
-
-    if (loading) return <Spinner />;
+    useEffect(() => {
+        const loadFeatured = async () => {
+            try {
+                const res = await fetchCampaigns();
+                setFeatured(res.data.campaigns.slice(0, 3));
+            } catch (error) {
+                console.error(error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadFeatured();
+    }, []);
 
     return (
-        <div className="card">
-            <h2>Make a Contribution</h2>
-            <form onSubmit={handleDonate}>
-                <div style={styles.formGroup}>
-                    <label>Full Name</label>
-                    <input
-                        type="text"
-                        name="donorName"
-                        placeholder="Enter your name"
-                        value={formData.donorName}
-                        onChange={handleChange}
-                        required
-                    />
+        <div style={styles.container}>
+            {/* Hero Section */}
+            <header style={styles.hero}>
+                <h1 style={styles.heroTitle}>Empower Change Through Giving</h1>
+                <p style={styles.heroSub}>Join our community of donors and make a lasting impact on lives across the globe.</p>
+                <div style={styles.heroActions}>
+                    <Link to="/campaigns" style={styles.primaryBtn}>Explore Campaigns <ChevronRight size={20}/></Link>
                 </div>
-                <div style={styles.formGroup}>
-                    <label>Email Address</label>
-                    <input
-                        type="email"
-                        name="donorEmail"
-                        placeholder="Enter your email"
-                        value={formData.donorEmail}
-                        onChange={handleChange}
-                        required
-                    />
+            </header>
+
+            {/* Features Section */}
+            <section style={styles.features}>
+                <div style={styles.featureItem}>
+                    <ShieldCheck size={40} color="#646cff" />
+                    <h3>Secure Payments</h3>
+                    <p>Verified transactions via Razorpay with instant digital receipts.</p>
                 </div>
-                <div style={styles.formGroup}>
-                    <label>Amount (INR)</label>
-                    <input
-                        type="number"
-                        name="amount"
-                        placeholder="Enter amount"
-                        value={formData.amount}
-                        onChange={handleChange}
-                        required
-                    />
+                <div style={styles.featureItem}>
+                    <Heart size={40} color="#f44336" />
+                    <h3>Direct Impact</h3>
+                    <p>100% of your donation goes directly to the chosen campaign.</p>
                 </div>
-                <button type="submit" disabled={loading}>
-                    Donate Now
-                </button>
-            </form>
+                <div style={styles.featureItem}>
+                    <Users size={40} color="#4CAF50" />
+                    <h3>Community</h3>
+                    <p>Join thousands of donors making the world a better place.</p>
+                </div>
+            </section>
+
+            {/* Featured Campaigns */}
+            <section style={styles.featuredSection}>
+                <div style={styles.sectionHeader}>
+                    <h2>Featured Campaigns</h2>
+                    <Link to="/campaigns" style={styles.seeAll}>View All <ChevronRight size={16}/></Link>
+                </div>
+                
+                {loading ? <Spinner /> : (
+                    <div style={styles.grid}>
+                        {featured.map(c => <CampaignCard key={c._id} campaign={c} />)}
+                    </div>
+                )}
+            </section>
+
+            {/* Call to Action */}
+            <section style={styles.cta}>
+                <h2>Ready to make a difference?</h2>
+                <p>Every contribution, no matter how small, counts towards a better future.</p>
+                <Link to="/register" style={styles.secondaryBtn}>Get Started Today</Link>
+            </section>
         </div>
     );
 };
 
 const styles = {
-    formGroup: {
+    container: {
+        maxWidth: '1200px',
+        margin: '0 auto',
+        padding: '0 2rem'
+    },
+    hero: {
+        textAlign: 'center',
+        padding: '5rem 0',
+        backgroundColor: '#1a1a1a',
+        borderRadius: '20px',
+        margin: '2rem 0',
+        color: 'white'
+    },
+    heroTitle: {
+        fontSize: '3.5rem',
         marginBottom: '1rem',
-        textAlign: 'left'
+        fontWeight: '800'
+    },
+    heroSub: {
+        fontSize: '1.25rem',
+        color: '#ccc',
+        maxWidth: '700px',
+        margin: '0 auto 2.5rem'
+    },
+    heroActions: {
+        display: 'flex',
+        justifyContent: 'center'
+    },
+    primaryBtn: {
+        backgroundColor: '#646cff',
+        color: 'white',
+        padding: '1rem 2rem',
+        borderRadius: '10px',
+        fontSize: '1.1rem',
+        fontWeight: 'bold',
+        textDecoration: 'none',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem'
+    },
+    features: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(3, 1fr)',
+        gap: '3rem',
+        margin: '5rem 0',
+        textAlign: 'center'
+    },
+    featureItem: {
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '1rem'
+    },
+    featuredSection: {
+        margin: '5rem 0'
+    },
+    sectionHeader: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '2rem'
+    },
+    seeAll: {
+        color: '#646cff',
+        textDecoration: 'none',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.2rem',
+        fontWeight: 'bold'
+    },
+    grid: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
+        gap: '2.5rem'
+    },
+    cta: {
+        backgroundColor: '#646cff',
+        color: 'white',
+        padding: '5rem 2rem',
+        borderRadius: '20px',
+        textAlign: 'center',
+        margin: '5rem 0'
+    },
+    secondaryBtn: {
+        backgroundColor: 'white',
+        color: '#646cff',
+        padding: '1rem 2rem',
+        borderRadius: '10px',
+        fontSize: '1.1rem',
+        fontWeight: 'bold',
+        textDecoration: 'none',
+        display: 'inline-block',
+        marginTop: '2rem'
     }
 };
 

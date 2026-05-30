@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { downloadReceipt } from '../services/api';
+import { downloadReceipt, downloadCertificate } from '../services/api';
 
 const Success = () => {
     const location = useLocation();
@@ -31,7 +31,13 @@ const Success = () => {
                     onClick={() => downloadReceipt(donationId)}
                     style={styles.downloadBtn}
                 >
-                    Download Receipt (PDF)
+                    Download Receipt
+                </button>
+                <button 
+                    onClick={() => downloadCertificate(donationId)}
+                    style={{...styles.downloadBtn, backgroundColor: '#4CAF50'}}
+                >
+                    Download Certificate
                 </button>
                 <Link to="/" style={styles.homeLink}>Back to Home</Link>
             </div>

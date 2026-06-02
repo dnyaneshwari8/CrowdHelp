@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { fetchCampaigns, createCampaign, updateCampaign, deleteCampaign } from '../services/api';
+import { fetchCampaigns, fetchAllCampaignsAdmin, fetchNGOCampaigns, createCampaign, updateCampaign, deleteCampaign } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import Spinner from '../components/Spinner';
 import { Plus, Edit, Trash2, X } from 'lucide-react';
 
 const AdminCampaigns = () => {
+    const { user } = useAuth();
     const [campaigns, setCampaigns] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
@@ -19,12 +21,21 @@ const AdminCampaigns = () => {
     const [image, setImage] = useState(null);
 
     useEffect(() => {
-        loadCampaigns();
-    }, []);
+        if (user) {
+            loadCampaigns();
+        }
+    }, [user]);
 
     const loadCampaigns = async () => {
         try {
-            const res = await fetchCampaigns();
+            let res;
+            if (user?.role === 'ADMIN') {
+                res = await fetchAllCampaignsAdmin();
+            } else if (user?.role === 'NGO') {
+                res = await fetchNGOCampaigns();
+            } else {
+                res = await fetchCampaigns();
+            }
             setCampaigns(res.data.campaigns);
         } catch (error) {
             console.error(error);
@@ -36,12 +47,12 @@ const AdminCampaigns = () => {
     const handleEdit = (campaign) => {
         setEditingCampaign(campaign);
         setFormData({
-            title: campaign.title,
-            description: campaign.description,
-            category: campaign.category,
-            goalAmount: campaign.goalAmount,
-            startDate: campaign.startDate.split('T')[0],
-            endDate: campaign.endDate.split('T')[0]
+            title: campaign.title || '',
+            description: campaign.description || '',
+            category: campaign.category || 'Education',
+            goalAmount: campaign.goalAmount || '',
+            startDate: campaign.startDate ? campaign.startDate.split('T')[0] : '',
+            endDate: campaign.endDate ? campaign.endDate.split('T')[0] : ''
         });
         setShowModal(true);
     };
@@ -59,6 +70,7 @@ const AdminCampaigns = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setLoading(true);
         const data = new FormData();
         Object.keys(formData).forEach(key => data.append(key, formData[key]));
         if (image) data.append('image', image);
@@ -71,10 +83,15 @@ const AdminCampaigns = () => {
             }
             setShowModal(false);
             setEditingCampaign(null);
+            setImage(null);
             loadCampaigns();
             alert('Campaign saved successfully');
         } catch (error) {
-            alert('Operation failed');
+            console.error('Operation failed:', error);
+            const msg = error.response?.data?.message || 'Operation failed. Please check if all fields are filled correctly.';
+            alert(msg);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -113,7 +130,9 @@ const AdminCampaigns = () => {
                                 <td>{c.status}</td>
                                 <td style={styles.actions}>
                                     <button onClick={() => handleEdit(c)} style={styles.editBtn}><Edit size={16} /></button>
-                                    <button onClick={() => handleDelete(c._id)} style={styles.deleteBtn}><Trash2 size={16} /></button>
+                                    {user?.role === 'ADMIN' && (
+                                        <button onClick={() => handleDelete(c._id)} style={styles.deleteBtn}><Trash2 size={16} /></button>
+                                    )}
                                 </td>
                             </tr>
                         ))}
@@ -171,13 +190,30 @@ const styles = {
     editBtn: { backgroundColor: '#FF9800', width: 'auto', padding: '0.4rem' },
     deleteBtn: { backgroundColor: '#F44336', width: 'auto', padding: '0.4rem' },
     modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 },
-    modal: { width: '100%', maxWidth: '600px', padding: '2rem' },
+    modal: { 
+        width: '100%', 
+        maxWidth: '600px', 
+        padding: '3rem',
+        backgroundColor: 'var(--bg-card)',
+        borderRadius: '24px',
+        boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
+        border: '1px solid var(--border)'
+    },
     modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' },
     closeBtn: { background: 'none', border: 'none', color: '#666', cursor: 'pointer' },
-    form: { display: 'flex', flexDirection: 'column', gap: '1rem' },
-    textarea: { height: '100px', padding: '0.8rem', borderRadius: '4px', backgroundColor: '#242424', color: 'white', border: '1px solid #333' },
-    row: { display: 'flex', gap: '1rem' },
-    submitBtn: { marginTop: '1rem' }
+    form: { display: 'flex', flexDirection: 'column', gap: '1.25rem' },
+    textarea: { 
+        height: '120px', 
+        padding: '1rem', 
+        borderRadius: '12px', 
+        backgroundColor: 'var(--bg-surface)', 
+        color: 'var(--text-primary)', 
+        border: '1px solid var(--border)',
+        fontSize: '1rem',
+        fontFamily: 'inherit'
+    },
+    row: { display: 'flex', gap: '1.25rem' },
+    submitBtn: { marginTop: '1rem', padding: '1rem' }
 };
 
 export default AdminCampaigns;

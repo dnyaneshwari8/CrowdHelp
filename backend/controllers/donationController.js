@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const Donation = require('../models/Donation');
 const Campaign = require('../models/Campaign');
 const User = require('../models/User');
+const { emailService, notificationService } = require('../services/emailService');
 const { generateReceipt } = require('../utils/pdfGenerator');
 const { generateCertificate } = require('../utils/certificateGenerator');
 const { sendConfirmationEmail } = require('../utils/emailSender');
@@ -37,9 +38,14 @@ exports.createOrder = async (req, res) => {
 
         const order = await razorpay.orders.create(options);
 
+        // Find campaign to get NGO ID if it belongs to an NGO
+        const campaign = await Campaign.findById(campaignId);
+        const ngoId = campaign && campaign.createdByRole === 'NGO' ? campaign.createdBy : null;
+
         const newDonation = new Donation({
             userId,
             campaignId,
+            ngoId,
             donorName,
             donorEmail,
             amount,
@@ -100,7 +106,37 @@ exports.verifyPayment = async (req, res) => {
                 donation.campaignId,
                 { $inc: { currentAmount: donation.amount } },
                 { new: true }
-            );
+            ).populate('createdBy', 'name email');
+
+            // Notify NGO if campaign belongs to NGO
+            if (donation.ngoId) {
+                await notificationService.create(
+                    donation.ngoId,
+                    'New Donation Received!',
+                    `${donation.donorName} donated ₹${donation.amount} to your campaign "${campaign.title}"`,
+                    'NEW_DONATION_RECEIVED'
+                );
+            }
+
+            // Check if goal is achieved
+            if (campaign.currentAmount >= campaign.goalAmount && campaign.status !== 'COMPLETED') {
+                // Mark as completed
+                campaign.status = 'COMPLETED';
+                await campaign.save();
+
+                // Notify NGO/Admin creator
+                if (campaign.createdByRole === 'NGO') {
+                    await notificationService.create(
+                        campaign.createdBy._id,
+                        'Campaign Goal Achieved!',
+                        `Congratulations! Your campaign "${campaign.title}" has successfully reached its goal.`,
+                        'CAMPAIGN_GOAL_ACHIEVED'
+                    );
+                    
+                    // Send Email to NGO
+                    await emailService.sendCampaignGoalAchieved(campaign.createdBy, campaign);
+                }
+            }
 
             // Generate Receipt
             const pdfPath = await generateReceipt(donation);
@@ -113,8 +149,31 @@ exports.verifyPayment = async (req, res) => {
                 $push: { certificates: donation._id }
             });
 
-            // Send Confirmation Email (Receipt)
-            await sendConfirmationEmail(donation, pdfPath);
+            // Create Notifications for Donor
+            await notificationService.create(
+                donation.userId,
+                'Donation Successful!',
+                `Thank you for donating ₹${donation.amount} to "${campaign.title}".`,
+                'DONATION_SUCCESS'
+            );
+
+            await notificationService.create(
+                donation.userId,
+                'Receipt Ready',
+                'Your donation receipt is available for download.',
+                'RECEIPT_GENERATED'
+            );
+
+            await notificationService.create(
+                donation.userId,
+                'Certificate Ready',
+                'Your certificate of appreciation is available.',
+                'CERTIFICATE_GENERATED'
+            );
+
+            // Send Confirmation Email with attachments
+            const donor = await User.findById(donation.userId);
+            await emailService.sendDonationSuccess(donor, campaign, donation, pdfPath, certPath);
 
             res.status(200).json({
                 message: "Payment Verified Successfully",

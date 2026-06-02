@@ -28,8 +28,21 @@ const userSchema = new mongoose.Schema({
     },
     role: {
         type: String,
-        enum: ['USER', 'ADMIN'],
+        enum: ['USER', 'NGO', 'ADMIN'],
         default: 'USER'
+    },
+    // NGO Specific Fields
+    organizationName: { type: String, trim: true },
+    organizationDescription: { type: String },
+    organizationEmail: { type: String, lowercase: true, trim: true },
+    organizationPhone: { type: String, trim: true },
+    registrationNumber: { type: String, trim: true },
+    website: { type: String, trim: true },
+    organizationLogo: { type: String, default: '' },
+    ngoStatus: {
+        type: String,
+        enum: ['PENDING', 'APPROVED', 'REJECTED', 'NONE'],
+        default: 'NONE'
     },
     isVerified: {
         type: Boolean,

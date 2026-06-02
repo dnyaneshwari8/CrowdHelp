@@ -67,6 +67,11 @@ export const fetchCampaignById = async (id) => {
     return response.data;
 };
 
+export const fetchCampaignUpdates = async (campaignId) => {
+    const response = await api.get(`/campaigns/${campaignId}/updates`);
+    return response.data;
+};
+
 export const createCampaign = async (formData) => {
     const response = await api.post('/campaigns', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
@@ -108,6 +113,13 @@ export const toggleFavorite = async (campaignId) => {
 
 export const fetchCertificates = async () => {
     const response = await api.get('/users/certificates');
+    return response.data;
+};
+
+export const applyNGO = async (formData) => {
+    const response = await api.post('/users/apply-ngo', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    });
     return response.data;
 };
 
@@ -153,6 +165,66 @@ export const downloadCertificate = (donationId) => {
 };
 
 /**
+ * NGO Dashboard Services
+ */
+export const fetchNGODashboardStats = async () => {
+    const response = await api.get('/ngo/dashboard');
+    return response.data;
+};
+
+export const fetchNGOCampaigns = async () => {
+    const response = await api.get('/ngo/my-campaigns');
+    return response.data;
+};
+
+export const fetchNGODonations = async (params = {}) => {
+    const response = await api.get('/ngo/donations', { params });
+    return response.data;
+};
+
+export const fetchNGOAnalytics = async () => {
+    const response = await api.get('/ngo/analytics');
+    return response.data;
+};
+
+export const fetchNGOUpdates = async () => {
+    const response = await api.get('/ngo/updates');
+    return response.data;
+};
+
+export const postNGOUpdate = async (updateData) => {
+    const response = await api.post('/ngo/updates', updateData);
+    return response.data;
+};
+
+export const deleteNGOUpdate = async (id) => {
+    const response = await api.delete(`/ngo/updates/${id}`);
+    return response.data;
+};
+
+export const fetchNGONotifications = async () => {
+    const response = await api.get('/ngo/notifications');
+    return response.data;
+};
+
+export const markNotificationRead = async (id) => {
+    const response = await api.patch(`/ngo/notifications/${id}/read`);
+    return response.data;
+};
+
+export const fetchNGODocuments = async () => {
+    const response = await api.get('/ngo/documents');
+    return response.data;
+};
+
+export const updateNGOProfile = async (formData) => {
+    const response = await api.patch('/ngo/profile', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return response.data;
+};
+
+/**
  * Admin Services
  */
 export const fetchAllUsers = async (filters = {}) => {
@@ -188,6 +260,75 @@ export const exportDonations = () => {
 
 export const toggleBlockUser = async (userId) => {
     const response = await api.post('/admin/block-user', { userId });
+    return response.data;
+};
+
+export const fetchAllCampaignsAdmin = async () => {
+    const response = await api.get('/admin/campaigns');
+    return response.data;
+};
+
+export const fetchNGOApplications = async () => {
+    const response = await api.get('/admin/ngo-applications');
+    return response.data;
+};
+
+export const updateNGOStatus = async (ngoId, status, adminRemarks = '') => {
+    if (status === 'APPROVED') {
+        return approveNGO(ngoId, adminRemarks);
+    } else {
+        return rejectNGO(ngoId, adminRemarks);
+    }
+};
+
+export const approveNGO = async (applicationId, adminRemarks) => {
+    const response = await api.post('/admin/approve-ngo', { applicationId, adminRemarks });
+    return response.data;
+};
+
+export const rejectNGO = async (applicationId, adminRemarks) => {
+    const response = await api.post('/admin/reject-ngo', { applicationId, adminRemarks });
+    return response.data;
+};
+
+export const fetchPendingCampaigns = async () => {
+    const response = await api.get('/admin/pending-campaigns');
+    return response.data;
+};
+
+export const updateCampaignStatus = async (campaignId, status, adminRemarks = '') => {
+    if (status === 'APPROVED') {
+        return approveCampaign(campaignId);
+    } else {
+        return rejectCampaign(campaignId, adminRemarks);
+    }
+};
+
+export const approveCampaign = async (campaignId) => {
+    const response = await api.post('/admin/approve-campaign', { campaignId });
+    return response.data;
+};
+
+export const rejectCampaign = async (campaignId, adminRemarks) => {
+    const response = await api.post('/admin/reject-campaign', { campaignId, adminRemarks });
+    return response.data;
+};
+
+export const fetchAuditLogs = async () => {
+    const response = await api.get('/admin/audit-logs');
+    return response.data;
+};
+
+// NGO Application Specific
+export const submitNGOApplication = async (formData) => {
+    const response = await api.post('/ngo-applications/apply', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return response.data;
+};
+
+export const fetchMyNGOApplication = async () => {
+    const response = await api.get('/ngo-applications/my-application');
     return response.data;
 };
 

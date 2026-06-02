@@ -33,7 +33,6 @@ exports.protect = async (req, res, next) => {
 
         // Grant access to protected route
         req.user = currentUser;
-        next();
     } catch (error) {
         console.error('Auth Middleware Error:', error);
         
@@ -44,8 +43,10 @@ exports.protect = async (req, res, next) => {
             return res.status(401).json({ message: 'Your token has expired. Please log in again.' });
         }
         
-        res.status(500).json({ message: 'Internal Server Error in authentication middleware', error: error.message });
+        return res.status(500).json({ message: 'Internal Server Error in authentication middleware', error: error.message });
     }
+
+    next();
 };
 
 /**
@@ -53,10 +54,16 @@ exports.protect = async (req, res, next) => {
  */
 exports.restrictTo = (...roles) => {
     return (req, res, next) => {
-        // roles is an array like ['ADMIN']
         if (!roles.includes(req.user.role)) {
             return res.status(403).json({ message: 'You do not have permission to perform this action.' });
         }
         next();
     };
 };
+
+/**
+ * Specific role-based middlewares
+ */
+exports.allowUser = () => exports.restrictTo('USER');
+exports.allowNGO = () => exports.restrictTo('NGO');
+exports.allowAdmin = () => exports.restrictTo('ADMIN');

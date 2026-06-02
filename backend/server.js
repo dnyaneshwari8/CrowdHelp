@@ -12,19 +12,42 @@ const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const campaignRoutes = require('./routes/campaignRoutes');
 const userRoutes = require('./routes/userRoutes');
+const ngoRoutes = require('./routes/ngoRoutes');
+const ngoApplicationRoutes = require('./routes/ngoApplicationRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
+
+// Ensure required directories exist
+const uploadDir = path.join(__dirname, 'uploads');
+const receiptsDir = path.join(__dirname, 'receipts');
+const certificatesDir = path.join(__dirname, 'certificates');
+
+[uploadDir, receiptsDir, certificatesDir].forEach(dir => {
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+        console.log(`Created directory: ${dir}`);
+    }
+});
 
 // 3. Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Request Logger Middleware (To see incoming data)
 app.use((req, res, next) => {
     console.log(`[${new Date().toLocaleString()}] ${req.method} ${req.url}`);
-    if (req.method === 'POST') console.log('Body:', req.body);
+    if (req.method === 'POST') {
+        if (req.headers['content-type']?.includes('multipart/form-data')) {
+            console.log('Body: [Multipart Form Data - Logging skipped for binary data]');
+        } else {
+            console.log('Body:', req.body);
+        }
+    }
     next();
 });
 
@@ -33,6 +56,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/campaigns', campaignRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/ngo', ngoRoutes);
+app.use('/api/ngo-applications', ngoApplicationRoutes);
+app.use('/api/notifications', notificationRoutes);
 app.use('/api', donationRoutes);
 
 // Root route

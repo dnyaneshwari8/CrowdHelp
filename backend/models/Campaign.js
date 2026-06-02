@@ -29,8 +29,8 @@ const campaignSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['Active', 'Completed', 'Paused'],
-        default: 'Active'
+        enum: ['PENDING', 'APPROVED', 'REJECTED', 'COMPLETED', 'Active', 'Paused'],
+        default: 'PENDING'
     },
     startDate: {
         type: Date,
@@ -44,6 +44,16 @@ const campaignSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true
+    },
+    createdByRole: {
+        type: String,
+        enum: ['NGO', 'ADMIN'],
+        required: true
+    },
+    ngoId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: false // Only required if createdByRole is NGO
     }
 }, { timestamps: true });
 

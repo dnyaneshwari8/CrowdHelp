@@ -1,10 +1,10 @@
 import React from 'react';
 
-const Spinner = () => {
+const Spinner = ({ message = 'Loading...' }) => {
     return (
         <div style={styles.spinnerContainer}>
             <div style={styles.spinner}></div>
-            <p>Processing Payment...</p>
+            <p style={styles.text}>{message}</p>
         </div>
     );
 };
@@ -15,15 +15,21 @@ const styles = {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '2rem'
+        padding: '2rem',
+        minHeight: '200px'
     },
     spinner: {
         width: '40px',
         height: '40px',
-        border: '4px solid #f3f3f3',
-        borderTop: '4px solid #646cff',
+        border: '4px solid #1e293b',
+        borderTop: '4px solid #22c55e',
         borderRadius: '50%',
         animation: 'spin 1s linear infinite',
+        marginBottom: '1rem'
+    },
+    text: {
+        color: '#94a3b8',
+        fontSize: '0.9rem'
     }
 };
 

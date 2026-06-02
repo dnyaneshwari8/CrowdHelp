@@ -5,12 +5,12 @@ const ProgressBar = ({ current, goal }) => {
 
     return (
         <div style={styles.container}>
+            <div style={styles.labels}>
+                <span style={styles.raised}>₹{current.toLocaleString()}</span>
+                <span style={styles.percentage}>{percentage}%</span>
+            </div>
             <div style={styles.barBackground}>
                 <div style={{ ...styles.barForeground, width: `${percentage}%` }}></div>
-            </div>
-            <div style={styles.labels}>
-                <span>₹{current.toLocaleString()} raised</span>
-                <span>{percentage}%</span>
             </div>
             <div style={styles.goal}>Goal: ₹{goal.toLocaleString()}</div>
         </div>
@@ -23,27 +23,40 @@ const styles = {
     },
     barBackground: {
         width: '100%',
-        height: '10px',
-        backgroundColor: '#eee',
-        borderRadius: '5px',
-        overflow: 'hidden'
+        height: '8px',
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        borderRadius: '100px',
+        overflow: 'hidden',
+        border: '1px solid var(--border)'
     },
     barForeground: {
         height: '100%',
-        backgroundColor: '#646cff',
-        transition: 'width 0.5s ease-in-out'
+        background: 'var(--gradient-main)',
+        transition: 'width 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+        borderRadius: '100px'
     },
     labels: {
         display: 'flex',
         justifyContent: 'space-between',
-        marginTop: '5px',
+        alignItems: 'flex-end',
+        marginBottom: '0.75rem'
+    },
+    raised: {
+        fontSize: '1.2rem',
+        fontWeight: '800',
+        color: '#fff'
+    },
+    percentage: {
         fontSize: '0.9rem',
-        fontWeight: 'bold'
+        fontWeight: '700',
+        color: 'var(--primary)'
     },
     goal: {
         textAlign: 'right',
         fontSize: '0.8rem',
-        color: '#666'
+        color: 'var(--text-secondary)',
+        marginTop: '0.5rem',
+        fontWeight: '500'
     }
 };
 

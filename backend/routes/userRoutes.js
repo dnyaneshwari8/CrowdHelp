@@ -8,6 +8,7 @@ router.use(protect);
 
 router.get('/profile', userController.getProfile);
 router.patch('/profile', upload.single('profileImage'), userController.updateProfile);
+router.post('/apply-ngo', upload.single('organizationLogo'), userController.applyNGO);
 router.post('/favorites/toggle', userController.toggleFavorite);
 router.get('/certificates', userController.getCertificates);
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { fetchUserProfile, updateUserProfile, downloadCertificate } from '../services/api';
 import Spinner from '../components/Spinner';
-import { Camera, Download, Award, Heart, History as HistoryIcon } from 'lucide-react';
+import { Camera, Download, Award, Heart, Mail, Phone as PhoneIcon, MapPin, Edit3, ShieldCheck } from 'lucide-react';
 
 const Profile = () => {
     const [profile, setProfile] = useState(null);
@@ -48,86 +48,111 @@ const Profile = () => {
     return (
         <div style={styles.container}>
             <div className="card" style={styles.profileHeader}>
-                <div style={styles.imageSection}>
-                    <img 
-                        src={profile.user.profileImage ? `http://localhost:5000${profile.user.profileImage}` : 'https://via.placeholder.com/150'} 
-                        alt="Profile" 
-                        style={styles.profilePic} 
-                    />
-                    {isEditing && (
-                        <label style={styles.uploadLabel}>
-                            <Camera size={20} />
-                            <input type="file" onChange={(e) => setImage(e.target.files[0])} style={{ display: 'none' }} />
-                        </label>
-                    )}
-                </div>
-                
-                <div style={styles.headerInfo}>
-                    {!isEditing ? (
-                        <>
-                            <h1>{profile.user.name}</h1>
-                            <p>{profile.user.email}</p>
-                            <p>{profile.user.phone}</p>
-                            <button onClick={() => setIsEditing(true)} style={styles.editBtn}>Edit Profile</button>
-                        </>
-                    ) : (
-                        <form onSubmit={handleUpdate} style={styles.editForm}>
-                            <input 
-                                type="text" 
-                                value={formData.name} 
-                                onChange={(e) => setFormData({ ...formData, name: e.target.value })} 
-                                placeholder="Name"
-                            />
-                            <input 
-                                type="text" 
-                                value={formData.phone} 
-                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })} 
-                                placeholder="Phone"
-                            />
-                            <div style={styles.editActions}>
-                                <button type="submit" style={styles.saveBtn}>Save</button>
-                                <button onClick={() => setIsEditing(false)} style={styles.cancelBtn}>Cancel</button>
-                            </div>
-                        </form>
-                    )}
+                <div style={styles.headerTop}>
+                    <div style={styles.imageSection}>
+                        <img 
+                            src={profile.user.profileImage ? `http://localhost:5000${profile.user.profileImage}` : 'https://placehold.co/150'} 
+                            alt="Profile" 
+                            style={styles.profilePic} 
+                        />
+                        {isEditing && (
+                            <label style={styles.uploadLabel}>
+                                <Camera size={18} />
+                                <input type="file" onChange={(e) => setImage(e.target.files[0])} style={{ display: 'none' }} />
+                            </label>
+                        )}
+                    </div>
+                    
+                    <div style={styles.headerInfo}>
+                        {!isEditing ? (
+                            <>
+                                <h1 style={styles.name}>{profile.user.name}</h1>
+                                <div style={styles.contactInfo}>
+                                    <span><Mail size={16}/> {profile.user.email}</span>
+                                    <span><PhoneIcon size={16}/> {profile.user.phone}</span>
+                                </div>
+                                {profile.user.ngoStatus !== 'NONE' && (
+                                    <div style={{
+                                        ...styles.ngoStatusBadge,
+                                        backgroundColor: profile.user.ngoStatus === 'APPROVED' ? 'rgba(76, 175, 80, 0.1)' : 'rgba(255, 152, 0, 0.1)',
+                                        color: profile.user.ngoStatus === 'APPROVED' ? '#4CAF50' : '#FF9800'
+                                    }}>
+                                        <ShieldCheck size={14}/> {profile.user.ngoStatus} NGO
+                                    </div>
+                                )}
+                                <button onClick={() => setIsEditing(true)} style={styles.editBtn}>
+                                    <Edit3 size={16}/> Edit Profile
+                                </button>
+                            </>
+                        ) : (
+                            <form onSubmit={handleUpdate} style={styles.editForm}>
+                                <input 
+                                    type="text" 
+                                    value={formData.name} 
+                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })} 
+                                    placeholder="Full Name"
+                                    style={styles.editInput}
+                                />
+                                <input 
+                                    type="text" 
+                                    value={formData.phone} 
+                                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })} 
+                                    placeholder="Phone Number"
+                                    style={styles.editInput}
+                                />
+                                <div style={styles.editActions}>
+                                    <button type="submit" style={styles.saveBtn}>Save Changes</button>
+                                    <button type="button" onClick={() => setIsEditing(false)} style={styles.cancelBtn}>Cancel</button>
+                                </div>
+                            </form>
+                        )}
+                    </div>
                 </div>
 
-                <div style={styles.stats}>
+                <div style={styles.statsRow}>
                     <div style={styles.statItem}>
-                        <h3>{profile.stats.count}</h3>
-                        <p>Donations</p>
+                        <div style={styles.statValue}>{profile.stats.count}</div>
+                        <div style={styles.statLabel}>Total Donations</div>
                     </div>
                     <div style={styles.statItem}>
-                        <h3>₹{profile.stats.totalDonated.toLocaleString()}</h3>
-                        <p>Contributed</p>
+                        <div style={styles.statValue}>₹{profile.stats.totalDonated.toLocaleString()}</div>
+                        <div style={styles.statLabel}>Total Contributed</div>
                     </div>
                 </div>
             </div>
 
             <div style={styles.sections}>
                 <div className="card" style={styles.section}>
-                    <h2 style={styles.sectionTitle}><Award /> My Certificates</h2>
+                    <h2 style={styles.sectionTitle}><Award color="var(--primary)"/> My Certificates</h2>
                     <div style={styles.list}>
                         {profile.user.certificates.length > 0 ? profile.user.certificates.map(certId => (
                             <div key={certId} style={styles.listItem}>
-                                <span>Donation Certificate - {certId.substring(0, 8)}...</span>
+                                <div style={styles.itemInfo}>
+                                    <span style={styles.itemTitle}>Donation Certificate</span>
+                                    <span style={styles.itemId}>#{certId.substring(0, 8)}</span>
+                                </div>
                                 <button onClick={() => downloadCertificate(certId)} style={styles.downloadBtn}>
-                                    <Download size={16} /> Download
+                                    <Download size={16} />
                                 </button>
                             </div>
-                        )) : <p>No certificates earned yet.</p>}
+                        )) : <p style={styles.emptyMsg}>No certificates earned yet.</p>}
                     </div>
                 </div>
 
                 <div className="card" style={styles.section}>
-                    <h2 style={styles.sectionTitle}><Heart /> Favorite Campaigns</h2>
+                    <h2 style={styles.sectionTitle}><Heart color="#f44336"/> Saved Campaigns</h2>
                     <div style={styles.list}>
                         {profile.user.favorites.length > 0 ? profile.user.favorites.map(fav => (
                             <div key={fav._id} style={styles.listItem}>
-                                <span>{fav.title}</span>
-                                <button onClick={() => window.location.href = `/campaigns/${fav._id}`} style={styles.viewBtn}>View</button>
+                                <div style={styles.itemInfo}>
+                                    <span style={styles.itemTitle}>{fav.title}</span>
+                                    <span style={styles.itemCategory}>{fav.category}</span>
+                                </div>
+                                <button onClick={() => window.location.href = `/campaigns/${fav._id}`} style={styles.viewBtn}>
+                                    View
+                                </button>
                             </div>
-                        )) : <p>No favorites added yet.</p>}
+                        )) : <p style={styles.emptyMsg}>No favorites added yet.</p>}
                     </div>
                 </div>
             </div>
@@ -142,54 +167,123 @@ const styles = {
         padding: '0 2rem'
     },
     profileHeader: {
+        padding: '3rem',
+        marginBottom: '3rem',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '3rem'
+    },
+    headerTop: {
         display: 'flex',
         alignItems: 'center',
         gap: '3rem',
-        padding: '3rem',
-        marginBottom: '2rem',
         flexWrap: 'wrap'
     },
     imageSection: {
         position: 'relative'
     },
     profilePic: {
-        width: '150px',
-        height: '150px',
-        borderRadius: '50%',
+        width: '140px',
+        height: '140px',
+        borderRadius: '32px',
         objectFit: 'cover',
-        border: '4px solid #646cff'
+        border: '4px solid var(--border)',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
     },
     uploadLabel: {
         position: 'absolute',
-        bottom: '10px',
-        right: '10px',
-        backgroundColor: '#646cff',
-        color: 'white',
-        padding: '8px',
-        borderRadius: '50%',
-        cursor: 'pointer'
+        bottom: '-10px',
+        right: '-10px',
+        backgroundColor: 'var(--primary)',
+        color: '#000',
+        padding: '10px',
+        borderRadius: '14px',
+        cursor: 'pointer',
+        boxShadow: '0 4px 12px rgba(138, 180, 248, 0.3)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
     },
     headerInfo: {
         flex: 1,
         textAlign: 'left'
     },
-    editBtn: {
-        backgroundColor: 'transparent',
-        color: '#646cff',
-        border: '1px solid #646cff',
+    name: {
+        fontSize: '2.5rem',
+        marginBottom: '0.5rem',
+        fontWeight: '800'
+    },
+    contactInfo: {
+        display: 'flex',
+        gap: '1.5rem',
+        color: 'var(--text-secondary)',
+        fontSize: '1rem',
+        marginBottom: '1.5rem'
+    },
+    ngoStatusBadge: {
         padding: '0.5rem 1rem',
-        borderRadius: '5px',
-        marginTop: '1rem',
+        borderRadius: '100px',
+        fontSize: '0.85rem',
+        fontWeight: '700',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '0.5rem',
+        marginBottom: '1.5rem'
+    },
+    editBtn: {
+        background: 'var(--glass)',
+        border: '1px solid var(--border)',
+        color: 'var(--text-primary)',
+        padding: '0.6rem 1.2rem',
+        borderRadius: '12px',
+        fontSize: '0.9rem',
+        fontWeight: '600',
         width: 'auto'
     },
-    stats: {
+    editForm: {
         display: 'flex',
-        gap: '2rem',
-        borderLeft: '1px solid #ddd',
-        paddingLeft: '2rem'
+        flexDirection: 'column',
+        gap: '1rem',
+        maxWidth: '400px'
+    },
+    editInput: {
+        background: 'var(--bg-surface)',
+        border: '1px solid var(--border)',
+        padding: '0.8rem 1rem'
+    },
+    editActions: {
+        display: 'flex',
+        gap: '1rem'
+    },
+    saveBtn: {
+        backgroundColor: 'var(--primary)',
+        color: '#000',
+        width: 'auto'
+    },
+    cancelBtn: {
+        backgroundColor: 'transparent',
+        border: '1px solid var(--border)',
+        color: 'var(--text-secondary)',
+        width: 'auto'
+    },
+    statsRow: {
+        display: 'flex',
+        gap: '4rem',
+        paddingTop: '2rem',
+        borderTop: '1px solid var(--border)'
     },
     statItem: {
-        textAlign: 'center'
+        textAlign: 'left'
+    },
+    statValue: {
+        fontSize: '1.8rem',
+        fontWeight: '800',
+        color: '#fff'
+    },
+    statLabel: {
+        color: 'var(--text-secondary)',
+        fontSize: '0.9rem',
+        fontWeight: '500'
     },
     sections: {
         display: 'grid',
@@ -197,16 +291,14 @@ const styles = {
         gap: '2rem'
     },
     section: {
-        padding: '2rem',
-        textAlign: 'left'
+        padding: '2.5rem'
     },
     sectionTitle: {
+        fontSize: '1.5rem',
+        marginBottom: '2rem',
         display: 'flex',
         alignItems: 'center',
-        gap: '0.5rem',
-        fontSize: '1.25rem',
-        color: '#646cff',
-        marginBottom: '1.5rem'
+        gap: '1rem'
     },
     list: {
         display: 'flex',
@@ -217,43 +309,49 @@ const styles = {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: '0.8rem',
-        backgroundColor: '#f9f9f9',
-        borderRadius: '5px',
-        fontSize: '0.9rem'
+        padding: '1.25rem',
+        background: 'var(--bg-surface)',
+        borderRadius: '16px',
+        border: '1px solid var(--border)'
     },
-    downloadBtn: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.4rem',
-        width: 'auto',
-        fontSize: '0.8rem',
-        padding: '0.4rem 0.8rem'
-    },
-    viewBtn: {
-        width: 'auto',
-        fontSize: '0.8rem',
-        padding: '0.4rem 0.8rem'
-    },
-    editForm: {
+    itemInfo: {
         display: 'flex',
         flexDirection: 'column',
-        gap: '0.5rem'
+        gap: '0.25rem',
+        textAlign: 'left'
     },
-    editActions: {
-        display: 'flex',
-        gap: '0.5rem',
-        marginTop: '0.5rem'
+    itemTitle: {
+        fontWeight: '700',
+        color: '#fff'
     },
-    saveBtn: {
-        backgroundColor: '#4CAF50',
+    itemId: {
+        fontSize: '0.8rem',
+        color: 'var(--text-secondary)'
+    },
+    itemCategory: {
+        fontSize: '0.8rem',
+        color: 'var(--primary)',
+        fontWeight: '600'
+    },
+    downloadBtn: {
+        padding: '0.75rem',
+        borderRadius: '12px',
+        background: 'rgba(255, 255, 255, 0.05)',
+        color: 'var(--text-primary)',
+        width: 'auto'
+    },
+    viewBtn: {
+        padding: '0.5rem 1.25rem',
+        borderRadius: '10px',
+        fontSize: '0.85rem',
         width: 'auto',
-        padding: '0.4rem 1rem'
+        background: 'var(--glass)',
+        color: 'var(--text-primary)',
+        border: '1px solid var(--border)'
     },
-    cancelBtn: {
-        backgroundColor: '#f44336',
-        width: 'auto',
-        padding: '0.4rem 1rem'
+    emptyMsg: {
+        color: 'var(--text-secondary)',
+        fontSize: '0.95rem'
     }
 };
 

@@ -1,7 +1,7 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { sendConfirmationEmail } = require('../utils/emailSender'); // Reusing existing email sender or creating new one if needed
+const { emailService } = require('../services/emailService');
 
 // Helper function to sign JWT token
 const signToken = (id) => {
@@ -47,13 +47,11 @@ exports.register = async (req, res) => {
             otpExpires
         });
 
-        // Send OTP via email
+        // Send Welcome Email with OTP
         try {
-            await sendConfirmationEmail({ donorEmail: email, donorName: name, amount: 'OTP Verification' }, null, `Your OTP for registration is ${otp}`);
+            await emailService.sendWelcomeEmail(newUser, otp);
         } catch (emailErr) {
             console.error('Email sending failed during registration:', emailErr);
-            // We don't return 500 here because the user is already created in DB
-            // They can use 'resend OTP' later
         }
 
         res.status(201).json({
@@ -174,7 +172,7 @@ exports.forgotPassword = async (req, res) => {
         user.otpExpires = new Date(Date.now() + 10 * 60 * 1000);
         await user.save();
 
-        await sendConfirmationEmail({ donorEmail: email, donorName: user.name, amount: 'Password Reset' }, null, `Your OTP for password reset is ${otp}`);
+        await emailService.sendForgotPasswordEmail(email, otp);
 
         res.status(200).json({ message: 'OTP sent to your email' });
     } catch (error) {

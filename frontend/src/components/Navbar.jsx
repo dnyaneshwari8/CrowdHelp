@@ -10,8 +10,13 @@ import {
     Trophy, 
     Users, 
     Megaphone,
-    BarChart3
+    BarChart3,
+    Building2,
+    PlusCircle,
+    History as HistoryIcon,
+    Bell
 } from 'lucide-react';
+import NotificationDropdown from './NotificationDropdown';
 
 const Navbar = () => {
     const { user, logoutUser } = useAuth();
@@ -19,100 +24,157 @@ const Navbar = () => {
 
     return (
         <nav style={styles.nav}>
-            <div style={styles.logo}>
-                <Link to="/" style={styles.brandLink}>CrowdHelp</Link>
-            </div>
-            
-            <ul style={styles.navLinks}>
-                <li><Link to="/campaigns" style={styles.link}><Megaphone size={18}/> Campaigns</Link></li>
-                <li><Link to="/donor-wall" style={styles.link}><Users size={18}/> Donor Wall</Link></li>
-                <li><Link to="/leaderboard" style={styles.link}><Trophy size={18}/> Leaderboard</Link></li>
+            <div style={styles.navContainer}>
+                <div style={styles.logo}>
+                    <Link to="/" style={styles.brandLink}>
+                        <div style={styles.logoIcon}>C</div>
+                        <span>CrowdHelp</span>
+                    </Link>
+                </div>
                 
-                {user ? (
-                    <>
-                        {user.role === 'ADMIN' ? (
-                            <div style={styles.adminGroup}>
-                                <li><Link to="/admin/analytics" style={styles.link}><BarChart3 size={18}/> Analytics</Link></li>
-                                <li><Link to="/admin/campaigns" style={styles.link}><LayoutDashboard size={18}/> Manage</Link></li>
-                                <li><Link to="/admin" style={styles.link}><Users size={18}/> Users</Link></li>
+                <ul style={styles.navLinks}>
+                    <li><Link to="/campaigns" style={styles.link}><Megaphone size={18}/> <span>Campaigns</span></Link></li>
+                    <li><Link to="/donor-wall" style={styles.link}><Users size={18}/> <span>Wall</span></Link></li>
+                    <li><Link to="/leaderboard" style={styles.link}><Trophy size={18}/> <span>Leaderboard</span></Link></li>
+                    
+                    {user ? (
+                        <>
+                            <div style={styles.divider}></div>
+                            {user.role === 'ADMIN' ? (
+                                <div style={styles.adminGroup}>
+                                    <li><Link to="/admin" style={styles.link}><LayoutDashboard size={18}/> <span>Admin</span></Link></li>
+                                    <li><Link to="/admin/campaigns" style={styles.link}><Megaphone size={18}/> <span>Manage</span></Link></li>
+                                    <li><Link to="/admin/ngo-applications" style={styles.link}><Building2 size={18}/> <span>NGOs</span></Link></li>
+                                    <li><Link to="/admin/campaign-approvals" style={styles.link}><PlusCircle size={18}/> <span>Approvals</span></Link></li>
+                                </div>
+                            ) : user.role === 'NGO' && user.ngoStatus === 'APPROVED' ? (
+                                <div style={styles.adminGroup}>
+                                    <li><Link to="/ngo/dashboard" style={styles.link}><LayoutDashboard size={18}/> <span>NGO Hub</span></Link></li>
+                                    <li><Link to="/ngo/my-campaigns" style={styles.link}><PlusCircle size={18}/> <span>Create</span></Link></li>
+                                    <li><Link to="/profile" style={styles.link}><UserIcon size={18}/> <span>Org Profile</span></Link></li>
+                                </div>
+                            ) : (
+                                <>
+                                    {user.ngoStatus === 'NONE' && (
+                                        <li><Link to="/apply-ngo" style={styles.link}><Building2 size={18}/> <span>Become NGO</span></Link></li>
+                                    )}
+                                    <li><Link to="/favorites" style={styles.link}><Heart size={18}/> <span>Favorites</span></Link></li>
+                                    <li><Link to="/profile" style={styles.link}><UserIcon size={18}/> <span>Profile</span></Link></li>
+                                </>
+                            )}
+                            <div style={{ marginLeft: '0.5rem' }}>
+                                <NotificationDropdown />
                             </div>
-                        ) : (
-                            <>
-                                <li><Link to="/favorites" style={styles.link}><Heart size={18}/> Favorites</Link></li>
-                                <li><Link to="/profile" style={styles.link}><UserIcon size={18}/> Profile</Link></li>
-                            </>
-                        )}
-                        <li>
-                            <button onClick={logoutUser} style={styles.logoutBtn}>
-                                <LogOut size={18}/> Logout
-                            </button>
-                        </li>
-                    </>
-                ) : (
-                    <>
-                        <li><Link to="/login" style={styles.link}>Login</Link></li>
-                        <li><Link to="/register" style={styles.link}>Register</Link></li>
-                    </>
-                )}
-            </ul>
+                            <li>
+                                <button onClick={logoutUser} style={styles.logoutBtn}>
+                                    <LogOut size={18}/>
+                                </button>
+                            </li>
+                        </>
+                    ) : (
+                        <>
+                            <div style={styles.divider}></div>
+                            <li><Link to="/login" style={styles.link}>Login</Link></li>
+                            <li><Link to="/register" style={styles.authBtn}>Get Started</Link></li>
+                        </>
+                    )}
+                </ul>
+            </div>
         </nav>
     );
 };
 
 const styles = {
     nav: {
+        position: 'sticky',
+        top: 0,
+        zIndex: 1000,
+        width: '100%',
+        backgroundColor: 'rgba(15, 17, 20, 0.8)',
+        backdropFilter: 'blur(12px)',
+        borderBottom: '1px solid var(--border)',
+        padding: '0.75rem 0'
+    },
+    navContainer: {
+        maxWidth: '1280px',
+        margin: '0 auto',
+        padding: '0 2rem',
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '1rem 2rem',
-        backgroundColor: '#1a1a1a',
-        color: 'white',
-        marginBottom: '2rem',
-        borderRadius: '8px',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.3)'
+        alignItems: 'center'
     },
     logo: {
-        fontSize: '1.5rem',
-        fontWeight: 'bold'
+        fontSize: '1.25rem',
+        fontWeight: '800'
     },
     brandLink: {
-        color: '#646cff',
-        textDecoration: 'none'
+        color: 'var(--text-primary)',
+        textDecoration: 'none',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.75rem'
+    },
+    logoIcon: {
+        width: '32px',
+        height: '32px',
+        background: 'var(--gradient-main)',
+        borderRadius: '8px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#000',
+        fontWeight: '900',
+        fontSize: '1.2rem'
     },
     navLinks: {
         display: 'flex',
         listStyle: 'none',
-        gap: '1.5rem',
+        gap: '0.5rem',
         margin: 0,
         alignItems: 'center'
     },
+    link: {
+        color: 'var(--text-secondary)',
+        textDecoration: 'none',
+        fontSize: '0.9rem',
+        fontWeight: '500',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem',
+        padding: '0.6rem 0.8rem',
+        borderRadius: '10px',
+        transition: 'all 0.2s ease'
+    },
     adminGroup: {
         display: 'flex',
-        gap: '1.5rem',
-        alignItems: 'center',
-        borderLeft: '1px solid #444',
-        paddingLeft: '1.5rem'
+        gap: '0.25rem',
+        alignItems: 'center'
     },
-    link: {
-        color: 'white',
-        textDecoration: 'none',
-        fontSize: '0.95rem',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.4rem',
-        transition: 'color 0.2s'
+    divider: {
+        width: '1px',
+        height: '24px',
+        backgroundColor: 'var(--border)',
+        margin: '0 0.5rem'
     },
     logoutBtn: {
-        backgroundColor: '#f44336',
-        color: 'white',
-        border: 'none',
-        padding: '0.5rem 1rem',
-        borderRadius: '4px',
+        background: 'rgba(255, 255, 255, 0.05)',
+        border: '1px solid var(--border)',
+        color: '#ff4d4d',
+        padding: '0.6rem',
+        borderRadius: '10px',
         cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.4rem',
-        fontSize: '0.9rem'
+        width: 'auto',
+        marginLeft: '0.5rem'
+    },
+    authBtn: {
+        backgroundColor: 'var(--primary)',
+        color: '#000',
+        padding: '0.6rem 1.2rem',
+        borderRadius: '10px',
+        fontSize: '0.9rem',
+        fontWeight: '600',
+        textDecoration: 'none',
+        transition: 'all 0.2s ease'
     }
 };
 

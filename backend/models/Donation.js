@@ -15,6 +15,11 @@ const donationSchema = new mongoose.Schema({
         ref: 'Campaign',
         required: true
     },
+    ngoId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: false // Populated for NGO-owned campaigns
+    },
     isAnonymous: {
         type: Boolean,
         default: false

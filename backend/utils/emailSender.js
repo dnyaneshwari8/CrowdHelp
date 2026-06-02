@@ -8,7 +8,7 @@ dotenv.config();
  * @param {string} pdfPath - Path to the generated PDF receipt
  * @param {string} customMessage - Optional custom message (e.g. for OTP)
  */
-const sendConfirmationEmail = async (donation, pdfPath, customMessage) => {
+const sendConfirmationEmail = async (donation, pdfPath, customMessage, subject) => {
     // Create a transporter using your email service
     const transporter = nodemailer.createTransport({
         service: 'gmail', // or your SMTP service
@@ -19,9 +19,9 @@ const sendConfirmationEmail = async (donation, pdfPath, customMessage) => {
     });
 
     const mailOptions = {
-        from: `"Donation Project" <${process.env.EMAIL_USER}>`,
+        from: `"CrowdHelp" <${process.env.EMAIL_USER}>`,
         to: donation.donorEmail,
-        subject: customMessage ? 'Verification Code' : 'Donation Successful - Receipt Attached',
+        subject: subject || (customMessage ? 'Verification Code' : 'Donation Successful - Receipt Attached'),
         text: customMessage || `Dear ${donation.donorName},\n\nThank you for your donation of ₹${donation.amount}. Please find your receipt attached to this email.\n\nPayment ID: ${donation.razorpay_payment_id}\n\nBest Regards,\nDonation Team`,
         attachments: pdfPath ? [
             {

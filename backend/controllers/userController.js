@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const Donation = require('../models/Donation');
+const { notificationService } = require('../services/emailService');
 
 /**
  * Get current user profile with stats
@@ -66,10 +67,18 @@ exports.toggleFavorite = async (req, res) => {
 
         const isFavorite = user.favorites.some(id => id.toString() === campaignId);
 
-        if (isFavorite) {
-            user.favorites.pull(campaignId);
-        } else {
+        if (!isFavorite) {
             user.favorites.push(campaignId);
+            
+            // Create notification
+            await notificationService.create(
+                req.user.id,
+                'Favorite Saved',
+                'Campaign added to your favorites.',
+                'FAVORITE_SAVED'
+            );
+        } else {
+            user.favorites.pull(campaignId);
         }
 
         await user.save();
@@ -78,6 +87,53 @@ exports.toggleFavorite = async (req, res) => {
             status: 'success',
             message: isFavorite ? 'Removed from favorites' : 'Added to favorites',
             isFavorite: !isFavorite
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+/**
+ * Apply to become an NGO
+ */
+exports.applyNGO = async (req, res) => {
+    try {
+        const {
+            organizationName,
+            organizationDescription,
+            registrationNumber,
+            organizationEmail,
+            organizationPhone,
+            website
+        } = req.body;
+
+        if (!organizationName || !registrationNumber || !organizationEmail) {
+            return res.status(400).json({ message: 'Missing required organization details' });
+        }
+
+        const updateData = {
+            organizationName,
+            organizationDescription,
+            registrationNumber,
+            organizationEmail,
+            organizationPhone,
+            website,
+            ngoStatus: 'PENDING'
+        };
+
+        if (req.file) {
+            updateData.organizationLogo = `/uploads/${req.file.filename}`;
+        }
+
+        const user = await User.findByIdAndUpdate(req.user.id, updateData, {
+            new: true,
+            runValidators: true
+        }).select('-password');
+
+        res.status(200).json({
+            status: 'success',
+            message: 'NGO application submitted successfully. Pending admin approval.',
+            data: { user }
         });
     } catch (error) {
         res.status(500).json({ message: error.message });

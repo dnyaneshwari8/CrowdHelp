@@ -1,241 +1,261 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { fetchNGODashboard } from '../services/api';
+import Skeleton from '../components/Skeleton';
 import { 
+    LayoutDashboard, 
     Megaphone, 
     IndianRupee, 
-    Users, 
-    Clock, 
-    CheckCircle2, 
-    AlertCircle,
-    TrendingUp,
-    Calendar
+    TrendingUp, 
+    Target, 
+    Sparkles, 
+    ChevronRight,
+    Users,
+    Calendar,
+    ArrowUpRight,
+    ArrowDownRight,
+    MoreHorizontal
 } from 'lucide-react';
-import api from '../services/api';
-import Spinner from '../components/Spinner';
 
 const NGODashboard = () => {
-    const [stats, setStats] = useState(null);
+    const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const navigate = useNavigate();
 
     useEffect(() => {
-        const fetchStats = async () => {
+        const loadData = async () => {
             try {
-                const res = await api.get('/ngo/dashboard');
-                setStats(res.data.data);
-                setLoading(false);
-            } catch (err) {
-                setError('Failed to load dashboard stats');
+                const res = await fetchNGODashboard();
+                setData(res.data);
+            } catch (error) {
+                console.error('Error loading NGO dashboard:', error);
+            } finally {
                 setLoading(false);
             }
         };
-        fetchStats();
+        loadData();
     }, []);
 
-    if (loading) return <Spinner />;
-    if (error) return <div style={styles.error}>{error}</div>;
-
-    const statCards = [
-        { title: 'Total Campaigns', value: stats.totalCampaigns, icon: <Megaphone size={24}/>, color: '#3b82f6' },
-        { title: 'Active Campaigns', value: stats.activeCampaigns, icon: <CheckCircle2 size={24}/>, color: '#22c55e' },
-        { title: 'Pending Approval', value: stats.pendingCampaigns, icon: <Clock size={24}/>, color: '#f59e0b' },
-        { title: 'Completed', value: stats.completedCampaigns, icon: <TrendingUp size={24}/>, color: '#8b5cf6' },
-        { title: 'Total Raised', value: `₹${stats.totalAmountRaised.toLocaleString()}`, icon: <IndianRupee size={24}/>, color: '#10b981' },
-        { title: 'Total Donors', value: stats.totalDonors, icon: <Users size={24}/>, color: '#6366f1' }
-    ];
-
-    return (
+    if (loading) return (
         <div style={styles.container}>
-            {/* Header */}
             <div style={styles.header}>
                 <div>
-                    <h1 style={styles.welcome}>Dashboard Overview</h1>
-                    <p style={styles.subtitle}>Welcome back! Here's what's happening with your campaigns.</p>
-                </div>
-                <div style={styles.dateDisplay}>
-                    <Calendar size={18}/>
-                    <span>{new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
+                    <Skeleton width="300px" height="40px" style={{ marginBottom: '1rem' }} />
+                    <Skeleton width="450px" height="20px" />
                 </div>
             </div>
-
-            {/* Stats Grid */}
-            <div style={styles.statsGrid}>
-                {statCards.map((card, index) => (
-                    <div key={index} style={styles.statCard}>
-                        <div style={{ ...styles.iconWrapper, backgroundColor: `${card.color}20`, color: card.color }}>
-                            {card.icon}
-                        </div>
-                        <div style={styles.statInfo}>
-                            <h3 style={styles.statValue}>{card.value}</h3>
-                            <p style={styles.statTitle}>{card.title}</p>
-                        </div>
+            <div style={styles.kpiGrid}>
+                {[1,2,3,4].map(i => (
+                    <div key={i} className="card" style={styles.kpiCard}>
+                        <Skeleton height="120px" />
                     </div>
                 ))}
             </div>
-
-            <div style={styles.bottomGrid}>
-                {/* Recent Activity */}
-                <div style={styles.card}>
-                    <div style={styles.cardHeader}>
-                        <h2 style={styles.cardTitle}>Recent Activity</h2>
-                        <button style={styles.viewAll}>View All</button>
-                    </div>
-                    <div style={styles.activityList}>
-                        {stats.recentActivity.length > 0 ? (
-                            stats.recentActivity.map((activity, index) => (
-                                <div key={index} style={styles.activityItem}>
-                                    <div style={{
-                                        ...styles.activityIcon,
-                                        backgroundColor: activity.type === 'DONATION' ? '#22c55e20' : '#3b82f620',
-                                        color: activity.type === 'DONATION' ? '#22c55e' : '#3b82f6'
-                                    }}>
-                                        {activity.type === 'DONATION' ? <IndianRupee size={16}/> : <Megaphone size={16}/>}
-                                    </div>
-                                    <div style={styles.activityContent}>
-                                        <p style={styles.activityTitle}>
-                                            <span style={styles.activityAction}>{activity.action}</span> {activity.title}
-                                        </p>
-                                        <p style={styles.activityDate}>
-                                            {new Date(activity.date).toLocaleString()}
-                                        </p>
-                                    </div>
-                                    {activity.amount && (
-                                        <div style={styles.activityAmount}>+₹{activity.amount}</div>
-                                    )}
-                                </div>
-                            ))
-                        ) : (
-                            <div style={styles.empty}>No recent activity found.</div>
-                        )}
+            <div style={styles.dashboardGrid}>
+                <div style={styles.mainCol}>
+                    <div className="card" style={styles.sectionCard}>
+                        <Skeleton height="400px" />
                     </div>
                 </div>
-
-                {/* Campaign Performance */}
-                <div style={styles.card}>
-                    <div style={styles.cardHeader}>
-                        <h2 style={styles.cardTitle}>Campaign Performance</h2>
-                        <button style={styles.viewAll}>View Campaigns</button>
-                    </div>
-                    <div style={styles.performanceList}>
-                        {stats.campaignPerformance.slice(0, 5).map((campaign, index) => {
-                            const progress = Math.min((campaign.currentAmount / campaign.goalAmount) * 100, 100);
-                            return (
-                                <div key={index} style={styles.performanceItem}>
-                                    <div style={styles.perfHeader}>
-                                        <span style={styles.perfTitle}>{campaign.title}</span>
-                                        <span style={styles.perfPercent}>{progress.toFixed(1)}%</span>
-                                    </div>
-                                    <div style={styles.progressContainer}>
-                                        <div style={{ ...styles.progressBar, width: `${progress}%`, backgroundColor: progress >= 100 ? '#22c55e' : '#3b82f6' }} />
-                                    </div>
-                                    <div style={styles.perfFooter}>
-                                        <span>₹{campaign.currentAmount.toLocaleString()} raised</span>
-                                        <span>Goal: ₹{campaign.goalAmount.toLocaleString()}</span>
-                                    </div>
-                                </div>
-                            );
-                        })}
+                <div style={styles.sideCol}>
+                    <div className="card" style={styles.sectionCard}>
+                        <Skeleton height="400px" />
                     </div>
                 </div>
             </div>
         </div>
     );
+
+    const kpis = [
+        { label: 'Total Raised', value: `₹${data.totalAmountRaised.toLocaleString()}`, change: '+12.5%', trend: 'up', icon: <IndianRupee size={24}/>, color: '#34a853' },
+        { label: 'Active Campaigns', value: data.activeCampaigns, change: '+2', trend: 'up', icon: <Megaphone size={24}/>, color: 'var(--primary)' },
+        { label: 'Total Donors', value: data.totalDonations, change: '+18', trend: 'up', icon: <Users size={24}/>, color: '#FF9800' },
+        { label: 'Avg. Donation', value: `₹${Math.round(data.totalAmountRaised / (data.totalDonations || 1)).toLocaleString()}`, change: '-2.4%', trend: 'down', icon: <TrendingUp size={24}/>, color: '#9c27b0' },
+    ];
+
+    return (
+        <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            style={styles.container}
+        >
+            <div style={styles.header}>
+                <div>
+                    <h1 style={styles.title}>Welcome back, <span className="gradient-text">Organization</span></h1>
+                    <p style={styles.subtitle}>Here's what's happening with your campaigns today.</p>
+                </div>
+                <div style={styles.headerActions}>
+                    <button style={styles.dateFilter}><Calendar size={16}/> Last 30 Days</button>
+                    <Link to="/ngo/my-campaigns" className="btn btn-primary">Create Campaign</Link>
+                </div>
+            </div>
+            
+            <div style={styles.kpiGrid}>
+                {kpis.map((kpi, i) => (
+                    <div key={i} className="card" style={styles.kpiCard}>
+                        <div style={styles.kpiHeader}>
+                            <div style={{...styles.iconBox, backgroundColor: `${kpi.color}15`, color: kpi.color}}>
+                                {kpi.icon}
+                            </div>
+                            <div style={{...styles.trendBadge, color: kpi.trend === 'up' ? 'var(--success)' : 'var(--error)'}}>
+                                {kpi.trend === 'up' ? <ArrowUpRight size={14}/> : <ArrowDownRight size={14}/>}
+                                {kpi.change}
+                            </div>
+                        </div>
+                        <div style={styles.kpiInfo}>
+                            <p style={styles.kpiLabel}>{kpi.label}</p>
+                            <h3 style={styles.kpiValue}>{kpi.value}</h3>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            <div style={styles.dashboardGrid}>
+                <div style={styles.mainCol}>
+                    <div className="card" style={styles.sectionCard}>
+                        <div style={styles.sectionHeader}>
+                            <h3 style={styles.sectionTitle}>Campaign Performance</h3>
+                            <Link to="/ngo/my-campaigns" style={styles.viewAll}>View All</Link>
+                        </div>
+                        
+                        <div style={styles.tableWrapper}>
+                            <table style={styles.table}>
+                                <thead>
+                                    <tr>
+                                        <th>Campaign</th>
+                                        <th>Status</th>
+                                        <th>Progress</th>
+                                        <th>Raised</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {data.campaignPerformance.map(campaign => {
+                                        const progress = Math.min(Math.round((campaign.currentAmount / campaign.goalAmount) * 100), 100);
+                                        return (
+                                            <tr key={campaign._id} style={styles.tr}>
+                                                <td>
+                                                    <div style={styles.campCell}>
+                                                        <div style={styles.campThumb}>
+                                                            {campaign.title[0]}
+                                                        </div>
+                                                        <div>
+                                                            <p style={styles.campTitle}>{campaign.title}</p>
+                                                            <p style={styles.campGoal}>Goal: ₹{campaign.goalAmount.toLocaleString()}</p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <span style={{
+                                                        ...styles.statusBadge,
+                                                        backgroundColor: campaign.status === 'APPROVED' ? 'rgba(52, 168, 83, 0.1)' : 'rgba(251, 188, 4, 0.1)',
+                                                        color: campaign.status === 'APPROVED' ? '#34a853' : '#fbbc04'
+                                                    }}>
+                                                        {campaign.status.toLowerCase()}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <div style={styles.progressContainer}>
+                                                        <div style={styles.progressBar}>
+                                                            <div style={{...styles.progressFill, width: `${progress}%`}}></div>
+                                                        </div>
+                                                        <span style={styles.progressText}>{progress}%</span>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <p style={styles.raisedAmt}>₹{campaign.currentAmount.toLocaleString()}</p>
+                                                </td>
+                                                <td>
+                                                    <button style={styles.actionBtn}><MoreHorizontal size={18}/></button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div style={styles.sideCol}>
+                    <div className="card" style={styles.impactCard}>
+                        <h3 style={styles.sectionTitle}>Impact Pulse</h3>
+                        <div style={styles.impactList}>
+                            <div style={styles.impactItem}>
+                                <div style={styles.impactIcon}><Users size={16}/></div>
+                                <div>
+                                    <p style={styles.impactText}>New donor contributed ₹5,000</p>
+                                    <p style={styles.impactTime}>2 hours ago</p>
+                                </div>
+                            </div>
+                            <div style={styles.impactItem}>
+                                <div style={styles.impactIcon}><Target size={16}/></div>
+                                <div>
+                                    <p style={styles.impactText}>Campaign reached 75% goal</p>
+                                    <p style={styles.impactTime}>5 hours ago</p>
+                                </div>
+                            </div>
+                            <div style={styles.impactItem}>
+                                <div style={styles.impactIcon}><Sparkles size={16}/></div>
+                                <div>
+                                    <p style={styles.impactText}>Your NGO was featured</p>
+                                    <p style={styles.impactTime}>Yesterday</p>
+                                </div>
+                            </div>
+                        </div>
+                        <button className="btn btn-secondary" style={{width: '100%', marginTop: '1rem'}}>
+                            View Full Report
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </motion.div>
+    );
 };
 
 const styles = {
-    container: { display: 'flex', flexDirection: 'column', gap: '2rem' },
-    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-    welcome: { fontSize: '1.75rem', fontWeight: '700', color: 'white', marginBottom: '0.5rem' },
-    subtitle: { color: '#94a3b8', fontSize: '1rem' },
-    dateDisplay: { 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: '0.5rem', 
-        padding: '0.6rem 1rem', 
-        background: '#1e293b', 
-        borderRadius: '10px', 
-        color: '#94a3b8',
-        fontSize: '0.9rem',
-        border: '1px solid #334155'
-    },
-    statsGrid: { 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', 
-        gap: '1.5rem' 
-    },
-    statCard: { 
-        background: '#1e293b', 
-        padding: '1.5rem', 
-        borderRadius: '16px', 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: '1.25rem',
-        border: '1px solid #334155'
-    },
-    iconWrapper: { 
-        width: '56px', 
-        height: '56px', 
-        borderRadius: '14px', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center' 
-    },
-    statInfo: { display: 'flex', flexDirection: 'column', gap: '0.25rem' },
-    statValue: { fontSize: '1.5rem', fontWeight: '700', color: 'white' },
-    statTitle: { fontSize: '0.9rem', color: '#94a3b8' },
-    bottomGrid: { 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', 
-        gap: '1.5rem' 
-    },
-    card: { 
-        background: '#1e293b', 
-        borderRadius: '16px', 
-        border: '1px solid #334155',
-        display: 'flex',
-        flexDirection: 'column'
-    },
-    cardHeader: { 
-        padding: '1.5rem', 
-        borderBottom: '1px solid #334155', 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center' 
-    },
-    cardTitle: { fontSize: '1.1rem', fontWeight: '600', color: 'white' },
-    viewAll: { color: '#22c55e', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '0.9rem' },
-    activityList: { padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' },
-    activityItem: { 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: '1rem', 
-        padding: '0.75rem', 
-        borderRadius: '12px',
-        transition: 'background 0.2s ease',
-        ':hover': { background: '#334155' }
-    },
-    activityIcon: { 
-        width: '36px', 
-        height: '36px', 
-        borderRadius: '10px', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center' 
-    },
-    activityContent: { flex: 1 },
-    activityTitle: { color: '#e2e8f0', fontSize: '0.9rem', marginBottom: '0.25rem' },
-    activityAction: { fontWeight: '600' },
-    activityDate: { color: '#64748b', fontSize: '0.75rem' },
-    activityAmount: { color: '#22c55e', fontWeight: '700', fontSize: '0.9rem' },
-    performanceList: { padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' },
-    performanceItem: { display: 'flex', flexDirection: 'column', gap: '0.75rem' },
-    perfHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-    perfTitle: { color: '#e2e8f0', fontSize: '0.95rem', fontWeight: '500' },
-    perfPercent: { color: '#22c55e', fontSize: '0.9rem', fontWeight: '600' },
-    progressContainer: { height: '8px', background: '#334155', borderRadius: '4px', overflow: 'hidden' },
-    progressBar: { height: '100%', borderRadius: '4px', transition: 'width 0.3s ease' },
-    perfFooter: { display: 'flex', justifyContent: 'space-between', color: '#64748b', fontSize: '0.8rem' },
-    error: { color: '#ef4444', textAlign: 'center', padding: '2rem' },
-    empty: { color: '#64748b', textAlign: 'center', padding: '2rem', fontSize: '0.9rem' }
+    container: { display: 'flex', flexDirection: 'column', gap: '2.5rem' },
+    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' },
+    title: { fontSize: '2rem', fontWeight: '800', marginBottom: '0.5rem' },
+    subtitle: { color: 'var(--text-secondary)', fontSize: '1rem' },
+    headerActions: { display: 'flex', gap: '1rem', alignItems: 'center' },
+    dateFilter: { background: 'var(--glass)', border: '1px solid var(--border)', padding: '0.6rem 1rem', borderRadius: '12px', color: 'var(--text-primary)', fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' },
+    kpiGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem' },
+    kpiCard: { padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' },
+    kpiHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' },
+    iconBox: { width: '48px', height: '48px', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+    trendBadge: { display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', fontWeight: '700', padding: '0.25rem 0.5rem', borderRadius: '8px', background: 'var(--glass)' },
+    kpiInfo: { display: 'flex', flexDirection: 'column', gap: '0.25rem' },
+    kpiLabel: { fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' },
+    kpiValue: { fontSize: '1.75rem', fontWeight: '800', color: 'var(--text-primary)', margin: 0 },
+    dashboardGrid: { display: 'grid', gridTemplateColumns: '1.5fr 0.5fr', gap: '1.5rem' },
+    mainCol: { display: 'flex', flexDirection: 'column', gap: '1.5rem' },
+    sectionCard: { padding: '1.5rem' },
+    sectionHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' },
+    sectionTitle: { fontSize: '1.1rem', fontWeight: '800', margin: 0 },
+    viewAll: { color: 'var(--primary)', fontSize: '0.9rem', fontWeight: '700', textDecoration: 'none' },
+    tableWrapper: { overflowX: 'auto' },
+    table: { width: '100%', borderCollapse: 'collapse' },
+    tr: { borderBottom: '1px solid var(--border)' },
+    campCell: { display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem 0' },
+    campThumb: { width: '40px', height: '40px', background: 'var(--glass-heavy)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', color: 'var(--primary)' },
+    campTitle: { fontSize: '0.95rem', fontWeight: '700', margin: 0, color: 'var(--text-primary)' },
+    campGoal: { fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 },
+    statusBadge: { padding: '0.3rem 0.75rem', borderRadius: '100px', fontSize: '0.75rem', fontWeight: '800', textTransform: 'capitalize' },
+    progressContainer: { display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: '120px' },
+    progressBar: { flex: 1, height: '6px', background: 'var(--glass)', borderRadius: '10px', overflow: 'hidden' },
+    progressFill: { height: '100%', background: 'var(--gradient-main)', borderRadius: '10px' },
+    progressText: { fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-secondary)' },
+    raisedAmt: { fontWeight: '700', fontSize: '0.95rem', color: 'var(--text-primary)' },
+    actionBtn: { background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' },
+    sideCol: { display: 'flex', flexDirection: 'column', gap: '1.5rem' },
+    impactCard: { padding: '1.5rem' },
+    impactList: { display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '1.5rem' },
+    impactItem: { display: 'flex', gap: '1rem' },
+    impactIcon: { width: '32px', height: '32px', borderRadius: '8px', background: 'var(--glass)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', flexShrink: 0 },
+    impactText: { fontSize: '0.9rem', fontWeight: '600', margin: 0, color: 'var(--text-primary)', lineHeight: '1.4' },
+    impactTime: { fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }
 };
 
 export default NGODashboard;

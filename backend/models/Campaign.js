@@ -29,7 +29,7 @@ const campaignSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['PENDING', 'APPROVED', 'REJECTED', 'COMPLETED', 'Active', 'Paused'],
+        enum: ['PENDING', 'APPROVED', 'REJECTED', 'COMPLETED', 'PAUSED'],
         default: 'PENDING'
     },
     startDate: {

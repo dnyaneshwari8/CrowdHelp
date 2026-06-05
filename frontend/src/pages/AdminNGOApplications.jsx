@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getImageUrl } from '../utils/imageHelper';
 import { fetchNGOApplications, approveNGO, rejectNGO } from '../services/api';
 import Spinner from '../components/Spinner';
 import { Check, X, Eye, Building2, Mail, Phone, FileText, ExternalLink, Calendar } from 'lucide-react';
@@ -119,7 +120,7 @@ const AdminNGOApplications = () => {
                         
                         <div style={styles.modalBody}>
                             <div style={styles.detailSection}>
-                                <img src={`http://localhost:5000${selectedApp.logo}`} alt="Logo" style={styles.logoPreview} />
+                                <img src={selectedApp.logo} alt="Logo" style={styles.logoPreview} />
                                 <div style={styles.mainInfo}>
                                     <h3>{selectedApp.organizationName}</h3>
                                     <p>{selectedApp.description}</p>
@@ -135,7 +136,7 @@ const AdminNGOApplications = () => {
                             </div>
 
                             <div style={styles.docs}>
-                                <a href={`http://localhost:5000${selectedApp.certificate}`} target="_blank" style={styles.docLink}>
+                                <a href={getImageUrl(selectedApp.certificate)} target="_blank" style={styles.docLink}>
                                     <FileText size={20}/> View Registration Certificate (PDF) <ExternalLink size={16}/>
                                 </a>
                             </div>

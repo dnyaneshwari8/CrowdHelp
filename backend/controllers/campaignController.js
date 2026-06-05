@@ -1,5 +1,4 @@
 const Campaign = require('../models/Campaign');
-const CampaignUpdate = require('../models/CampaignUpdate');
 const path = require('path');
 const fs = require('fs');
 
@@ -8,7 +7,8 @@ const fs = require('fs');
  */
 exports.getAllCampaigns = async (req, res) => {
     try {
-        const { category, search } = req.query;
+        const { category, search, sort, page = 1, limit = 9 } = req.query;
+        
         // Show both 'APPROVED' (new system) and 'Active'/'ACTIVE' (old/alternate system)
         let query = { 
             status: { $in: ['APPROVED', 'Active', 'ACTIVE'] } 
@@ -19,18 +19,38 @@ exports.getAllCampaigns = async (req, res) => {
         }
 
         if (search) {
-            query.title = { $regex: search, $options: 'i' };
+            query.$or = [
+                { title: { $regex: search, $options: 'i' } },
+                { description: { $regex: search, $options: 'i' } }
+            ];
         }
 
-        const campaigns = await Campaign.find(query).sort('-createdAt');
-        res.status(200).json({ status: 'success', data: { campaigns } });
-    } catch (error) {
-        console.error('--- CAMPAIGN RETRIEVAL ERROR ---');
-        console.error(error);
-        res.status(500).json({ 
-            message: 'Error fetching campaigns', 
-            error: error.message
+        // Sorting
+        let sortQuery = '-createdAt';
+        if (sort === 'oldest') sortQuery = 'createdAt';
+        if (sort === 'goal_high') sortQuery = '-goalAmount';
+        if (sort === 'goal_low') sortQuery = 'goalAmount';
+        if (sort === 'most_raised') sortQuery = '-currentAmount';
+
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        
+        const campaigns = await Campaign.find(query)
+            .sort(sortQuery)
+            .skip(skip)
+            .limit(parseInt(limit))
+            .populate('createdBy', 'name organizationName');
+
+        const total = await Campaign.countDocuments(query);
+
+        res.status(200).json({ 
+            status: 'success', 
+            results: campaigns.length,
+            total,
+            pages: Math.ceil(total / limit),
+            data: { campaigns } 
         });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
     }
 };
 
@@ -44,19 +64,6 @@ exports.getCampaignById = async (req, res) => {
             return res.status(404).json({ message: 'Campaign not found' });
         }
         res.status(200).json({ status: 'success', data: { campaign } });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-};
-
-/**
- * Get campaign updates
- */
-exports.getCampaignUpdates = async (req, res) => {
-    try {
-        const updates = await CampaignUpdate.find({ campaignId: req.params.id })
-            .sort('-createdAt');
-        res.status(200).json({ status: 'success', data: { updates } });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -109,7 +116,7 @@ exports.createCampaign = async (req, res) => {
             goalAmount: Number(goalAmount),
             startDate: new Date(startDate),
             endDate: new Date(endDate),
-            image: `/uploads/${req.file.filename}`,
+            image: req.file.path,
             createdBy: req.user.id,
             createdByRole: role,
             status: status
@@ -149,8 +156,8 @@ exports.updateCampaign = async (req, res) => {
         let updateData = { ...req.body };
         
         if (req.file) {
-            updateData.image = `/uploads/${req.file.filename}`;
-            // Optional: Delete old image
+            updateData.image = req.file.path;
+            // Cloudinary handles deletion if configured, but here we just update the URL
         }
 
         const campaign = await Campaign.findByIdAndUpdate(req.params.id, updateData, {

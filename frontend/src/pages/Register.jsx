@@ -8,13 +8,20 @@ const Register = () => {
         name: '',
         email: '',
         phone: '',
-        password: ''
+        password: '',
+        confirmPassword: ''
     });
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (formData.password !== formData.confirmPassword) {
+            alert('Passwords do not match');
+            return;
+        }
+
         setLoading(true);
         try {
             await register(formData);
@@ -79,6 +86,18 @@ const Register = () => {
                             placeholder="Create Password"
                             value={formData.password}
                             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                            required
+                            style={styles.input}
+                        />
+                    </div>
+
+                    <div style={styles.inputWrapper}>
+                        <Lock size={18} style={styles.icon}/>
+                        <input
+                            type="password"
+                            placeholder="Confirm Password"
+                            value={formData.confirmPassword}
+                            onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                             required
                             style={styles.input}
                         />

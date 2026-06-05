@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { submitNGOApplication, fetchMyNGOApplication, fetchUserProfile } from '../services/api';
+import { submitNGOApplication, fetchMyNGOApplication } from '../services/api';
 import Spinner from '../components/Spinner';
-import { useAuth } from '../context/AuthContext';
 import { Building2, Mail, Phone, Globe, MapPin, FileText, Upload, CheckCircle2, XCircle, Clock } from 'lucide-react';
 
 const NGOApplication = () => {
     const navigate = useNavigate();
-    const { user, loginUser } = useAuth();
     const [loading, setLoading] = useState(true);
     const [submitting, setDonating] = useState(false);
     const [application, setApplication] = useState(null);
@@ -31,12 +29,6 @@ const NGOApplication = () => {
                 const res = await fetchMyNGOApplication();
                 if (res.data.application) {
                     setApplication(res.data.application);
-                    
-                    // If application is approved but local user role is still USER, refresh profile
-                    if (res.data.application.status === 'APPROVED' && user?.role === 'USER') {
-                        const profileRes = await fetchUserProfile();
-                        loginUser(profileRes.data.user, localStorage.getItem('token'));
-                    }
                 }
             } catch (error) {
                 console.error('Error fetching application:', error);
@@ -45,7 +37,7 @@ const NGOApplication = () => {
             }
         };
         checkApplication();
-    }, [user]);
+    }, []);
 
     const handleFileChange = (e) => {
         setFiles({
@@ -96,11 +88,7 @@ const NGOApplication = () => {
                             <CheckCircle2 size={64} color="#4CAF50" />
                             <h1>Application Approved!</h1>
                             <p>Congratulations! You are now a verified NGO partner.</p>
-                            {user?.role === 'NGO' ? (
-                                <button onClick={() => navigate('/ngo/dashboard')} style={styles.dashboardBtn}>Go to NGO Dashboard</button>
-                            ) : (
-                                <p style={{ color: '#94a3b8' }}>Finalizing your account permissions... Please wait a moment.</p>
-                            )}
+                            <button onClick={() => navigate('/ngo/dashboard')} style={styles.dashboardBtn}>Go to NGO Dashboard</button>
                         </>
                     )}
                     {application.status === 'REJECTED' && (

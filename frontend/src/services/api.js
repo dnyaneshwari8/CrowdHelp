@@ -47,28 +47,21 @@ export const resetPassword = async (resetData) => {
     return response.data;
 };
 
+export const changePassword = async (passData) => {
+    const response = await api.post('/auth/change-password', passData);
+    return response.data;
+};
+
 /**
  * Campaign Services
  */
 export const fetchCampaigns = async (filters = {}) => {
-    const { category, search } = filters;
-    let url = '/campaigns';
-    const params = new URLSearchParams();
-    if (category) params.append('category', category);
-    if (search) params.append('search', search);
-    if (params.toString()) url += `?${params.toString()}`;
-    
-    const response = await api.get(url);
+    const response = await api.get('/campaigns', { params: filters });
     return response.data;
 };
 
 export const fetchCampaignById = async (id) => {
     const response = await api.get(`/campaigns/${id}`);
-    return response.data;
-};
-
-export const fetchCampaignUpdates = async (campaignId) => {
-    const response = await api.get(`/campaigns/${campaignId}/updates`);
     return response.data;
 };
 
@@ -124,6 +117,49 @@ export const applyNGO = async (formData) => {
 };
 
 /**
+ * NGO Services
+ */
+export const fetchNGODashboard = async () => {
+    const response = await api.get('/ngo/dashboard');
+    return response.data;
+};
+
+export const fetchNGOAnalytics = async () => {
+    const response = await api.get('/ngo/analytics');
+    return response.data;
+};
+
+export const fetchMyCampaigns = async () => {
+    const response = await api.get('/ngo/my-campaigns');
+    return response.data;
+};
+
+export const updateNGOProfile = async (formData) => {
+    const response = await api.patch('/ngo/profile', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return response.data;
+};
+
+/**
+ * Notification Services
+ */
+export const fetchNotifications = async () => {
+    const response = await api.get('/notifications');
+    return response.data;
+};
+
+export const markNotificationsAsRead = async () => {
+    const response = await api.patch('/notifications/mark-all-read');
+    return response.data;
+};
+
+export const markOneNotificationAsRead = async (id) => {
+    const response = await api.patch(`/notifications/${id}/read`);
+    return response.data;
+};
+
+/**
  * Donation Services
  */
 export const createOrder = async (orderData) => {
@@ -165,66 +201,6 @@ export const downloadCertificate = (donationId) => {
 };
 
 /**
- * NGO Dashboard Services
- */
-export const fetchNGODashboardStats = async () => {
-    const response = await api.get('/ngo/dashboard');
-    return response.data;
-};
-
-export const fetchNGOCampaigns = async () => {
-    const response = await api.get('/ngo/my-campaigns');
-    return response.data;
-};
-
-export const fetchNGODonations = async (params = {}) => {
-    const response = await api.get('/ngo/donations', { params });
-    return response.data;
-};
-
-export const fetchNGOAnalytics = async () => {
-    const response = await api.get('/ngo/analytics');
-    return response.data;
-};
-
-export const fetchNGOUpdates = async () => {
-    const response = await api.get('/ngo/updates');
-    return response.data;
-};
-
-export const postNGOUpdate = async (updateData) => {
-    const response = await api.post('/ngo/updates', updateData);
-    return response.data;
-};
-
-export const deleteNGOUpdate = async (id) => {
-    const response = await api.delete(`/ngo/updates/${id}`);
-    return response.data;
-};
-
-export const fetchNGONotifications = async () => {
-    const response = await api.get('/ngo/notifications');
-    return response.data;
-};
-
-export const markNotificationRead = async (id) => {
-    const response = await api.patch(`/ngo/notifications/${id}/read`);
-    return response.data;
-};
-
-export const fetchNGODocuments = async () => {
-    const response = await api.get('/ngo/documents');
-    return response.data;
-};
-
-export const updateNGOProfile = async (formData) => {
-    const response = await api.patch('/ngo/profile', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-    });
-    return response.data;
-};
-
-/**
  * Admin Services
  */
 export const fetchAllUsers = async (filters = {}) => {
@@ -254,8 +230,31 @@ export const fetchAdvancedAnalytics = async () => {
     return response.data;
 };
 
-export const exportDonations = () => {
-    window.open(`${API_URL}/admin/export-donations`, '_blank');
+export const exportDonations = async () => {
+    try {
+        const response = await api.get('/admin/export-donations', {
+            responseType: 'blob', // Important for handling binary data
+        });
+        
+        // Create a URL for the blob
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        
+        // Extract filename from content-disposition if available, or use default
+        const filename = `donations_export_${new Date().toISOString().split('T')[0]}.csv`;
+        
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+        
+        // Cleanup
+        link.remove();
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error('Export failed:', error);
+        throw error;
+    }
 };
 
 export const toggleBlockUser = async (userId) => {
@@ -319,7 +318,7 @@ export const fetchAuditLogs = async () => {
     return response.data;
 };
 
-// NGO Application Specific
+// NGO Specific
 export const submitNGOApplication = async (formData) => {
     const response = await api.post('/ngo-applications/apply', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
@@ -329,6 +328,11 @@ export const submitNGOApplication = async (formData) => {
 
 export const fetchMyNGOApplication = async () => {
     const response = await api.get('/ngo-applications/my-application');
+    return response.data;
+};
+
+export const fetchNGODonations = async () => {
+    const response = await api.get('/ngo/donations');
     return response.data;
 };
 

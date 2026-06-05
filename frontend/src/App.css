@@ -14,9 +14,34 @@ main {
   padding-top: 1rem;
 }
 
+/* Navbar Responsive Utilities */
+.desktop-nav {
+  display: none !important;
+}
+
+.mobile-toggle {
+  display: flex !important;
+}
+
+@media (min-width: 992px) {
+  .desktop-nav {
+    display: flex !important;
+  }
+  .mobile-toggle {
+    display: none !important;
+  }
+}
+
+.container {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
 @media (max-width: 768px) {
-  main {
-    padding: 1rem;
+  .container {
+    padding: 0 1rem;
   }
 }
 

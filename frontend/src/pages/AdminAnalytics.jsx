@@ -31,6 +31,7 @@ ChartJS.register(
 const AdminAnalytics = () => {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [exporting, setExporting] = useState(false);
 
     useEffect(() => {
         const loadAnalytics = async () => {
@@ -46,10 +47,26 @@ const AdminAnalytics = () => {
         loadAnalytics();
     }, []);
 
+    const handleExport = async () => {
+        setExporting(true);
+        try {
+            await exportDonations();
+        } catch (error) {
+            alert('Export failed. Please try again.');
+        } finally {
+            setExporting(false);
+        }
+    };
+
     if (loading) return <Spinner />;
 
+    const getMonthName = (monthNum) => {
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return months[monthNum - 1];
+    };
+
     const trendData = {
-        labels: data.trend.map(t => `${t._id.month}/${t._id.year}`),
+        labels: data.trend.map(t => `${getMonthName(t._id.month)} ${t._id.year}`),
         datasets: [{
             label: 'Monthly Donations (₹)',
             data: data.trend.map(t => t.amount),
@@ -75,30 +92,30 @@ const AdminAnalytics = () => {
         <div style={styles.container}>
             <div style={styles.header}>
                 <h1>Platform Analytics</h1>
-                <button onClick={exportDonations} style={styles.exportBtn}>
-                    <FileDown size={20} /> Export Donations (CSV)
+                <button onClick={handleExport} disabled={exporting} style={styles.exportBtn}>
+                    <FileDown size={20} /> {exporting ? 'Exporting...' : 'Export Donations (CSV)'}
                 </button>
             </div>
 
             <div style={styles.statsGrid}>
                 <div className="card" style={styles.statCard}>
                     <Users color="#646cff" />
-                    <h3>{data.totalDonors}</h3>
+                    <h3>{data.totalDonors || 0}</h3>
                     <p>Total Donors</p>
                 </div>
                 <div className="card" style={styles.statCard}>
                     <Target color="#4CAF50" />
-                    <h3>{data.totalCampaigns}</h3>
+                    <h3>{data.totalCampaigns || 0}</h3>
                     <p>Active Campaigns</p>
                 </div>
                 <div className="card" style={styles.statCard}>
                     <TrendingUp color="#FF9800" />
-                    <h3>{data.monthlyCount}</h3>
-                    <p>Donations This Month</p>
+                    <h3>{data.monthlyGrowth > 0 ? '+' : ''}{data.monthlyGrowth}%</h3>
+                    <p>Monthly Growth</p>
                 </div>
                 <div className="card" style={styles.statCard}>
                     <IndianRupee color="#F44336" />
-                    <h3>₹{data.monthlyAmount.toLocaleString()}</h3>
+                    <h3>₹{(data.monthlyAmount || 0).toLocaleString()}</h3>
                     <p>Monthly Total</p>
                 </div>
             </div>

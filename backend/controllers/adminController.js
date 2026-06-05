@@ -3,8 +3,9 @@ const Donation = require('../models/Donation');
 const Campaign = require('../models/Campaign');
 const NGOApplication = require('../models/NGOApplication');
 const AuditLog = require('../models/AuditLog');
-const { emailService, notificationService } = require('../services/emailService');
+const Notification = require('../models/Notification');
 const { Parser } = require('json2csv');
+const { sendConfirmationEmail } = require('../utils/emailSender');
 
 /**
  * NGO Application Management
@@ -50,15 +51,22 @@ exports.approveNGO = async (req, res) => {
         });
 
         // Create Notification
-        await notificationService.create(
-            user._id,
-            'NGO Application Approved!',
-            `Congratulations! Your NGO application for "${application.organizationName}" has been approved.`,
-            'NGO_APPLICATION_APPROVED'
-        );
+        await Notification.create({
+            recipient: user._id,
+            title: 'NGO Application Approved',
+            message: `Congratulations! Your NGO application for "${application.organizationName}" has been approved.`,
+            type: 'APPLICATION_STATUS',
+            relatedId: application._id,
+            relatedModel: 'NGOApplication'
+        });
 
         // Send Email
-        await emailService.sendNGOApproved(user);
+        await sendConfirmationEmail(
+            { donorEmail: user.email, donorName: user.name },
+            null,
+            `Congratulations! Your NGO application for "${application.organizationName}" has been approved. You can now access the NGO dashboard and start creating campaigns.`,
+            'NGO Application Approved'
+        );
 
         res.status(200).json({ status: 'success', message: 'NGO approved successfully' });
     } catch (error) {
@@ -90,15 +98,22 @@ exports.rejectNGO = async (req, res) => {
         });
 
         // Create Notification
-        await notificationService.create(
-            user._id,
-            'NGO Application Rejected',
-            `Your NGO application for "${application.organizationName}" has been rejected. Reason: ${adminRemarks}`,
-            'NGO_APPLICATION_REJECTED'
-        );
+        await Notification.create({
+            recipient: user._id,
+            title: 'NGO Application Rejected',
+            message: `Your NGO application for "${application.organizationName}" has been rejected. Reason: ${adminRemarks}`,
+            type: 'APPLICATION_STATUS',
+            relatedId: application._id,
+            relatedModel: 'NGOApplication'
+        });
 
         // Send Email
-        await emailService.sendNGORejected(user, adminRemarks);
+        await sendConfirmationEmail(
+            { donorEmail: user.email, donorName: user.name },
+            null,
+            `We regret to inform you that your NGO application for "${application.organizationName}" has been rejected.\n\nReason: ${adminRemarks}`,
+            'NGO Application Rejected'
+        );
 
         res.status(200).json({ status: 'success', message: 'NGO rejected successfully' });
     } catch (error) {
@@ -139,17 +154,22 @@ exports.approveCampaign = async (req, res) => {
         });
 
         // Create Notification
-        if (campaign.createdByRole === 'NGO') {
-            await notificationService.create(
-                campaign.createdBy._id,
-                'Campaign Approved!',
-                `Your campaign "${campaign.title}" has been approved and is now live.`,
-                'CAMPAIGN_APPROVED'
-            );
-        }
+        await Notification.create({
+            recipient: campaign.createdBy._id,
+            title: 'Campaign Approved',
+            message: `Your campaign "${campaign.title}" has been approved and is now live!`,
+            type: 'CAMPAIGN_APPROVED',
+            relatedId: campaign._id,
+            relatedModel: 'Campaign'
+        });
 
         // Send Email
-        await emailService.sendCampaignApproved(campaign.createdBy, campaign);
+        await sendConfirmationEmail(
+            { donorEmail: campaign.createdBy.email, donorName: campaign.createdBy.name },
+            null,
+            `Great news! Your campaign "${campaign.title}" has been approved and is now live on the platform.`,
+            'Campaign Approved'
+        );
 
         res.status(200).json({ status: 'success', message: 'Campaign approved successfully' });
     } catch (error) {
@@ -176,17 +196,22 @@ exports.rejectCampaign = async (req, res) => {
         });
 
         // Create Notification
-        if (campaign.createdByRole === 'NGO') {
-            await notificationService.create(
-                campaign.createdBy._id,
-                'Campaign Rejected',
-                `Your campaign "${campaign.title}" has been rejected. Reason: ${adminRemarks}`,
-                'CAMPAIGN_REJECTED'
-            );
-        }
+        await Notification.create({
+            recipient: campaign.createdBy._id,
+            title: 'Campaign Rejected',
+            message: `Your campaign "${campaign.title}" was rejected. Reason: ${adminRemarks}`,
+            type: 'CAMPAIGN_REJECTED',
+            relatedId: campaign._id,
+            relatedModel: 'Campaign'
+        });
 
         // Send Email
-        await emailService.sendCampaignRejected(campaign.createdBy, campaign, adminRemarks);
+        await sendConfirmationEmail(
+            { donorEmail: campaign.createdBy.email, donorName: campaign.createdBy.name },
+            null,
+            `Your campaign "${campaign.title}" has been rejected.\n\nReason: ${adminRemarks}`,
+            'Campaign Rejected'
+        );
 
         res.status(200).json({ status: 'success', message: 'Campaign rejected successfully' });
     } catch (error) {
@@ -266,19 +291,21 @@ exports.getUserDetails = async (req, res) => {
  */
 exports.getAdvancedAnalytics = async (req, res) => {
     try {
+        // Total Donors: For now, count all registered users with role 'USER' as potential donors
         const totalDonors = await User.countDocuments({ role: 'USER' });
-        const totalCampaigns = await Campaign.countDocuments();
-        const totalNGOs = await User.countDocuments({ role: 'NGO' });
+
+        const totalCampaigns = await Campaign.countDocuments({ status: { $in: ['APPROVED', 'COMPLETED'] } });
+        const totalNGOs = await User.countDocuments({ role: 'NGO', ngoStatus: 'APPROVED' });
         const pendingNGOs = await NGOApplication.countDocuments({ status: 'PENDING' });
         const pendingCampaigns = await Campaign.countDocuments({ status: 'PENDING' });
         
-        // Monthly stats
-        const startOfMonth = new Date();
-        startOfMonth.setDate(1);
-        startOfMonth.setHours(0, 0, 0, 0);
+        // Monthly stats (Current Month)
+        const now = new Date();
+        const startOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 
         const monthlyStats = await Donation.aggregate([
-            { $match: { status: 'completed', createdAt: { $gte: startOfMonth } } },
+            { $match: { status: 'completed', createdAt: { $gte: startOfCurrentMonth } } },
             {
                 $group: {
                     _id: null,
@@ -288,8 +315,33 @@ exports.getAdvancedAnalytics = async (req, res) => {
             }
         ]);
 
+        const lastMonthlyStats = await Donation.aggregate([
+            { $match: { 
+                status: 'completed', 
+                createdAt: { $gte: startOfLastMonth, $lt: startOfCurrentMonth } 
+            } },
+            {
+                $group: {
+                    _id: null,
+                    totalAmount: { $sum: '$amount' },
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+
+        const currentMonthAmount = monthlyStats.length > 0 ? monthlyStats[0].totalAmount : 0;
+        const lastMonthAmount = lastMonthlyStats.length > 0 ? lastMonthlyStats[0].totalAmount : 0;
+        
+        // Calculate Growth Percentage
+        let growth = 0;
+        if (lastMonthAmount > 0) {
+            growth = ((currentMonthAmount - lastMonthAmount) / lastMonthAmount) * 100;
+        } else if (currentMonthAmount > 0) {
+            growth = 100; // 100% growth if there were no donations last month
+        }
+
         // Campaign-wise distribution
-        const campaignStats = await Campaign.find().select('title currentAmount').limit(5).sort('-currentAmount');
+        const campaignStats = await Campaign.find().select('title currentAmount goalAmount').limit(5).sort('-currentAmount');
 
         // Monthly Trend (Last 6 months)
         const sixMonthsAgo = new Date();
@@ -309,15 +361,16 @@ exports.getAdvancedAnalytics = async (req, res) => {
         res.status(200).json({
             status: 'success',
             data: {
-                totalDonors,
-                totalCampaigns,
-                totalNGOs,
-                pendingNGOs,
-                pendingCampaigns,
-                monthlyAmount: monthlyStats.length > 0 ? monthlyStats[0].totalAmount : 0,
+                totalDonors: totalDonors || 0,
+                totalCampaigns: totalCampaigns || 0,
+                totalNGOs: totalNGOs || 0,
+                pendingNGOs: pendingNGOs || 0,
+                pendingCampaigns: pendingCampaigns || 0,
+                monthlyAmount: currentMonthAmount || 0,
                 monthlyCount: monthlyStats.length > 0 ? monthlyStats[0].count : 0,
-                campaignStats,
-                trend
+                monthlyGrowth: growth.toFixed(1),
+                campaignStats: campaignStats || [],
+                trend: trend || []
             }
         });
     } catch (error) {

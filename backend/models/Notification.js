@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const notificationSchema = new mongoose.Schema({
-    userId: {
+    recipient: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true
@@ -16,22 +16,16 @@ const notificationSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: [
-            'DONATION_SUCCESS',
-            'RECEIPT_GENERATED',
-            'CERTIFICATE_GENERATED',
-            'NGO_APPLICATION_SUBMITTED',
-            'NGO_APPLICATION_APPROVED',
-            'NGO_APPLICATION_REJECTED',
-            'CAMPAIGN_APPROVED',
-            'CAMPAIGN_REJECTED',
-            'NEW_DONATION_RECEIVED',
-            'CAMPAIGN_GOAL_ACHIEVED',
-            'CAMPAIGN_COMPLETED',
-            'ADMIN_ACTION',
-            'FAVORITE_SAVED'
-        ],
+        enum: ['CAMPAIGN_APPROVED', 'CAMPAIGN_REJECTED', 'DONATION_RECEIVED', 'GOAL_ACHIEVED', 'APPLICATION_STATUS', 'GENERAL'],
         required: true
+    },
+    relatedId: {
+        type: mongoose.Schema.Types.ObjectId,
+        refPath: 'relatedModel'
+    },
+    relatedModel: {
+        type: String,
+        enum: ['Campaign', 'Donation', 'NGOApplication']
     },
     isRead: {
         type: Boolean,
@@ -42,9 +36,5 @@ const notificationSchema = new mongoose.Schema({
         default: Date.now
     }
 }, { timestamps: true });
-
-// Index for performance
-notificationSchema.index({ userId: 1, createdAt: -1 });
-notificationSchema.index({ userId: 1, isRead: 1 });
 
 module.exports = mongoose.model('Notification', notificationSchema);

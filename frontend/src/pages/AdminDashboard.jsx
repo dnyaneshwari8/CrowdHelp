@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Users, 
     Megaphone, 
@@ -10,7 +11,16 @@ import {
     Download,
     Lock,
     Unlock,
-    ExternalLink
+    ExternalLink,
+    Filter,
+    MoreVertical,
+    CheckCircle2,
+    XCircle,
+    ArrowUpRight,
+    ArrowDownRight,
+    LayoutDashboard,
+    AlertCircle,
+    PlusCircle
 } from 'lucide-react';
 import { 
     fetchAllUsers, 
@@ -20,7 +30,7 @@ import {
     fetchAuditLogs,
     exportDonations 
 } from '../services/api';
-import Spinner from '../components/Spinner';
+import Skeleton from '../components/Skeleton';
 
 const AdminDashboard = () => {
     const [users, setUsers] = useState([]);
@@ -28,6 +38,7 @@ const AdminDashboard = () => {
     const [analytics, setAnalytics] = useState(null);
     const [auditLogs, setAuditLogs] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [exporting, setExporting] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState('overview');
 
@@ -55,8 +66,7 @@ const AdminDashboard = () => {
 
     const handleBlockToggle = async (userId) => {
         try {
-            const response = await toggleBlockUser(userId);
-            // Refresh users and logs
+            await toggleBlockUser(userId);
             const [usersRes, logsRes] = await Promise.all([fetchAllUsers(), fetchAuditLogs()]);
             setUsers(usersRes.data.users);
             setAuditLogs(logsRes.data.logs);
@@ -65,336 +75,407 @@ const AdminDashboard = () => {
         }
     };
 
+    const handleExport = async () => {
+        setExporting(true);
+        try {
+            await exportDonations();
+        } catch (error) {
+            alert('Export failed. Please try again.');
+        } finally {
+            setExporting(false);
+        }
+    };
+
     const filteredUsers = users.filter(u => 
         u.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
         u.email.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    if (loading) return <Spinner />;
-
-    return (
-        <div style={styles.container}>
-            <header style={styles.header}>
+    if (loading) return (
+        <div style={{ ...styles.container, padding: '2rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3rem' }}>
                 <div>
-                    <h1 style={styles.title}>Admin Central</h1>
-                    <p style={styles.subtitle}>Manage platform activities and security audit logs.</p>
+                    <Skeleton width="300px" height="40px" style={{ marginBottom: '1rem' }} />
+                    <Skeleton width="450px" height="20px" />
                 </div>
-                <button onClick={exportDonations} style={styles.exportBtn}>
-                    <Download size={18} />
-                    Export CSV
-                </button>
-            </header>
-
-            {/* Stats Grid */}
-            {analytics && (
-                <div style={styles.statsGrid}>
-                    <div style={styles.statCard}>
-                        <div style={{ ...styles.iconWrapper, background: 'rgba(138, 180, 248, 0.1)', color: 'var(--primary)' }}>
-                            <Users size={24} />
-                        </div>
-                        <div>
-                            <p style={styles.statLabel}>Total Donors</p>
-                            <h3 style={styles.statValue}>{analytics.totalDonors}</h3>
-                        </div>
+            </div>
+            <div style={styles.kpiGrid}>
+                {[1,2,3,4].map(i => (
+                    <div key={i} className="card" style={styles.kpiCard}>
+                        <Skeleton height="120px" />
                     </div>
-                    <div style={styles.statCard}>
-                        <div style={{ ...styles.iconWrapper, background: 'rgba(52, 168, 83, 0.1)', color: '#34a853' }}>
-                            <Megaphone size={24} />
-                        </div>
-                        <div>
-                            <p style={styles.statLabel}>Active Campaigns</p>
-                            <h3 style={styles.statValue}>{analytics.totalCampaigns}</h3>
-                            <p style={styles.statChange}>{analytics.pendingCampaigns} pending approval</p>
-                        </div>
-                    </div>
-                    <div style={styles.statCard}>
-                        <div style={{ ...styles.iconWrapper, background: 'rgba(251, 188, 4, 0.1)', color: '#fbbc04' }}>
-                            <ShieldCheck size={24} />
-                        </div>
-                        <div>
-                            <p style={styles.statLabel}>Verified NGOs</p>
-                            <h3 style={styles.statValue}>{analytics.totalNGOs}</h3>
-                            <p style={styles.statChange}>{analytics.pendingNGOs} new applications</p>
-                        </div>
-                    </div>
-                    <div style={styles.statCard}>
-                        <div style={{ ...styles.iconWrapper, background: 'rgba(234, 67, 53, 0.1)', color: '#ea4335' }}>
-                            <TrendingUp size={24} />
-                        </div>
-                        <div>
-                            <p style={styles.statLabel}>Monthly Growth</p>
-                            <h3 style={styles.statValue}>₹{analytics.monthlyAmount.toLocaleString()}</h3>
-                            <p style={styles.statChange}>{analytics.monthlyCount} donations this month</p>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Tabs */}
-            <div style={styles.tabBar}>
-                {['overview', 'users', 'donations', 'audit'].map(tab => (
-                    <button 
-                        key={tab}
-                        onClick={() => setActiveTab(tab)}
-                        style={{
-                            ...styles.tabItem,
-                            color: activeTab === tab ? 'var(--primary)' : 'var(--text-secondary)',
-                            borderBottom: activeTab === tab ? '2px solid var(--primary)' : '2px solid transparent'
-                        }}
-                    >
-                        {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                    </button>
                 ))}
             </div>
-
-            {/* Content Sections */}
-            <div style={styles.contentArea}>
-                {activeTab === 'overview' && (
-                    <div style={styles.overviewGrid}>
-                        <div style={styles.sectionCard}>
-                            <h3 style={styles.sectionTitle}>Recent Audit Logs</h3>
-                            <div style={styles.logList}>
-                                {auditLogs.slice(0, 6).map(log => (
-                                    <div key={log._id} style={styles.logItem}>
-                                        <div style={styles.logIcon}>
-                                            <Activity size={16} />
-                                        </div>
-                                        <div style={styles.logDetails}>
-                                            <p style={styles.logAction}>{log.action.replace(/_/g, ' ')}</p>
-                                            <p style={styles.logInfo}>{log.details}</p>
-                                            <p style={styles.logMeta}>
-                                                By {log.performedBy?.name || 'System'} • {new Date(log.createdAt).toLocaleString()}
-                                            </p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                        <div style={styles.sectionCard}>
-                            <h3 style={styles.sectionTitle}>Top Campaigns</h3>
-                            <div style={styles.topCampaignsList}>
-                                {analytics?.campaignStats.map(camp => (
-                                    <div key={camp._id} style={styles.campaignItem}>
-                                        <div style={styles.campInfo}>
-                                            <p style={styles.campTitle}>{camp.title}</p>
-                                            <p style={styles.campAmount}>₹{camp.currentAmount.toLocaleString()} raised</p>
-                                        </div>
-                                        <div style={styles.campProgressWrapper}>
-                                            <div 
-                                                style={{ 
-                                                    ...styles.campProgressBar, 
-                                                    width: `${Math.min((camp.currentAmount / (camp.goalAmount || 1)) * 100, 100)}%` 
-                                                }} 
-                                            />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {activeTab === 'users' && (
-                    <div style={styles.sectionCard}>
-                        <div style={styles.tableHeader}>
-                            <h3 style={styles.sectionTitle}>User Management</h3>
-                            <div style={styles.searchBox}>
-                                <Search size={18} />
-                                <input 
-                                    type="text" 
-                                    placeholder="Search users..." 
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    style={styles.searchInput}
-                                />
-                            </div>
-                        </div>
-                        <div style={styles.tableWrapper}>
-                            <table style={styles.table}>
-                                <thead>
-                                    <tr>
-                                        <th>User</th>
-                                        <th>Contact</th>
-                                        <th>Role</th>
-                                        <th>Status</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filteredUsers.map(u => (
-                                        <tr key={u._id}>
-                                            <td>
-                                                <div style={styles.userNameCell}>
-                                                    <div style={styles.avatar}>{u.name[0]}</div>
-                                                    <div>
-                                                        <p style={styles.userName}>{u.name}</p>
-                                                        <p style={styles.userEmail}>{u.email}</p>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td>{u.phone || 'N/A'}</td>
-                                            <td>
-                                                <span style={{ 
-                                                    ...styles.badge, 
-                                                    background: u.role === 'ADMIN' ? 'rgba(234, 67, 53, 0.1)' : 'rgba(138, 180, 248, 0.1)',
-                                                    color: u.role === 'ADMIN' ? '#ea4335' : 'var(--primary)'
-                                                }}>
-                                                    {u.role}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <span style={{ 
-                                                    ...styles.badge, 
-                                                    background: u.isBlocked ? 'rgba(234, 67, 53, 0.1)' : 'rgba(52, 168, 83, 0.1)',
-                                                    color: u.isBlocked ? '#ea4335' : '#34a853'
-                                                }}>
-                                                    {u.isBlocked ? 'Blocked' : 'Active'}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <button 
-                                                    onClick={() => handleBlockToggle(u._id)}
-                                                    style={{ 
-                                                        ...styles.iconBtn, 
-                                                        color: u.isBlocked ? '#34a853' : '#ea4335',
-                                                        background: u.isBlocked ? 'rgba(52, 168, 83, 0.1)' : 'rgba(234, 67, 53, 0.1)'
-                                                    }}
-                                                    title={u.isBlocked ? 'Unblock User' : 'Block User'}
-                                                    disabled={u.role === 'ADMIN'}
-                                                >
-                                                    {u.isBlocked ? <Unlock size={16}/> : <Lock size={16}/>}
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                )}
-
-                {activeTab === 'donations' && (
-                    <div style={styles.sectionCard}>
-                        <h3 style={styles.sectionTitle}>Transaction History</h3>
-                        <div style={styles.tableWrapper}>
-                            <table style={styles.table}>
-                                <thead>
-                                    <tr>
-                                        <th>Donor</th>
-                                        <th>Campaign</th>
-                                        <th>Amount</th>
-                                        <th>Status</th>
-                                        <th>Date</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {donations.map(d => (
-                                        <tr key={d._id}>
-                                            <td>
-                                                <p style={styles.userName}>{d.donorName}</p>
-                                                <p style={styles.userEmail}>{d.donorEmail}</p>
-                                            </td>
-                                            <td>{d.campaignId?.title || 'General'}</td>
-                                            <td>₹{d.amount.toLocaleString()}</td>
-                                            <td>
-                                                <span style={{ 
-                                                    ...styles.badge, 
-                                                    background: d.status === 'completed' ? 'rgba(52, 168, 83, 0.1)' : 'rgba(251, 188, 4, 0.1)',
-                                                    color: d.status === 'completed' ? '#34a853' : '#fbbc04'
-                                                }}>
-                                                    {d.status}
-                                                </span>
-                                            </td>
-                                            <td>{new Date(d.createdAt).toLocaleDateString()}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                )}
-
-                {activeTab === 'audit' && (
-                    <div style={styles.sectionCard}>
-                        <h3 style={styles.sectionTitle}>Security Audit Logs</h3>
-                        <div style={styles.tableWrapper}>
-                            <table style={styles.table}>
-                                <thead>
-                                    <tr>
-                                        <th>Action</th>
-                                        <th>Performed By</th>
-                                        <th>Details</th>
-                                        <th>Timestamp</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {auditLogs.map(log => (
-                                        <tr key={log._id}>
-                                            <td>
-                                                <span style={styles.logActionBadge}>{log.action}</span>
-                                            </td>
-                                            <td>
-                                                <p style={styles.userName}>{log.performedBy?.name || 'System'}</p>
-                                                <p style={styles.userEmail}>{log.performedBy?.role}</p>
-                                            </td>
-                                            <td>{log.details}</td>
-                                            <td>{new Date(log.createdAt).toLocaleString()}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                )}
+            <div className="card" style={{ marginTop: '2rem', padding: '2rem' }}>
+                <Skeleton height="500px" />
             </div>
         </div>
     );
-};
+
+    const kpis = analytics ? [
+        { label: 'Verified Donors', value: analytics.totalDonors, sub: 'Active contributors', icon: <Users size={20}/>, color: 'var(--primary)', trend: '+4.2%' },
+        { label: 'Live Campaigns', value: analytics.totalCampaigns, sub: `${analytics.pendingCampaigns} pending`, icon: <Megaphone size={20}/>, color: 'var(--success)', trend: '+2' },
+        { label: 'Partner NGOs', value: analytics.totalNGOs, sub: `${analytics.pendingNGOs} new apps`, icon: <ShieldCheck size={20}/>, color: 'var(--warning)', trend: '+1' },
+        { label: 'Monthly Revenue', value: `₹${analytics.monthlyAmount.toLocaleString()}`, sub: `${analytics.monthlyCount} donations`, icon: <TrendingUp size={20}/>, color: 'var(--primary)', trend: `${analytics.monthlyGrowth}%` }
+    ] : [];
+
+    return (
+        <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            style={styles.container}
+        >
+            <header style={styles.header}>
+                <div style={styles.headerTitle}>
+                    <div style={styles.headerBadge}><LayoutDashboard size={14}/> System Admin</div>
+                    <h1 style={styles.title}>Platform <span className="gradient-text">Overview</span></h1>
+                    <p style={styles.subtitle}>Enterprise management console for CrowdHelp platform.</p>
+                </div>
+                <div style={styles.headerActions}>
+                    <button onClick={handleExport} disabled={exporting} className="btn btn-secondary">
+                        <Download size={18} /> {exporting ? 'Exporting...' : 'Export Audit Data'}
+                    </button>
+                    <button className="btn btn-primary">
+                        <PlusCircle size={18} /> Add System User
+                    </button>
+                </div>
+            </header>
+
+            {/* KPI Cards */}
+            <div style={styles.kpiGrid}>
+                {kpis.map((kpi, i) => (
+                    <motion.div 
+                        key={i}
+                        whileHover={{ y: -5 }}
+                        className="card" 
+                        style={styles.kpiCard}
+                    >
+                        <div style={styles.kpiTop}>
+                            <div style={{...styles.iconWrapper, background: `${kpi.color}15`, color: kpi.color}}>
+                                {kpi.icon}
+                            </div>
+                            <span style={{...styles.trend, color: kpi.trend.includes('+') ? 'var(--success)' : 'var(--error)'}}>
+                                {kpi.trend} {kpi.trend.includes('+') ? <ArrowUpRight size={14}/> : <ArrowDownRight size={14}/>}
+                            </span>
+                        </div>
+                        <div style={styles.kpiBottom}>
+                            <h3 style={styles.kpiValue}>{kpi.value}</h3>
+                            <p style={styles.kpiLabel}>{kpi.label}</p>
+                            <p style={styles.kpiSub}>{kpi.sub}</p>
+                        </div>
+                    </motion.div>
+                ))}
+            </div>
+
+            {/* Tab Navigation */}
+            <div style={styles.tabContainer}>
+                <div style={styles.tabs}>
+                    {[
+                        { id: 'overview', label: 'Overview', icon: <Activity size={18}/> },
+                        { id: 'users', label: 'User Management', icon: <Users size={18}/> },
+                        { id: 'donations', label: 'Financials', icon: <IndianRupee size={18}/> },
+                        { id: 'audit', label: 'Security Logs', icon: <ShieldCheck size={18}/> }
+                    ].map(tab => (
+                        <button 
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            style={{
+                                ...styles.tabItem,
+                                color: activeTab === tab.id ? 'var(--primary)' : 'var(--text-secondary)',
+                                borderBottomColor: activeTab === tab.id ? 'var(--primary)' : 'transparent'
+                            }}
+                        >
+                            {tab.icon} {tab.label}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            <AnimatePresence mode="wait">
+                <motion.div 
+                    key={activeTab}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                    style={styles.tabContent}
+                >
+                    {activeTab === 'overview' && (
+                        <div style={styles.overviewGrid}>
+                            <div className="card" style={styles.sectionCard}>
+                                <div style={styles.sectionHeader}>
+                                    <h3 style={styles.sectionTitle}>Performance Trend</h3>
+                                    <button style={styles.iconBtn}><MoreVertical size={18}/></button>
+                                </div>
+                                <div style={styles.chartPlaceholder}>
+                                    <p style={{color: 'var(--text-muted)'}}>Revenue chart visualization</p>
+                                </div>
+                                <div style={styles.statsRow}>
+                                    <div style={styles.miniStat}>
+                                        <p style={styles.miniLabel}>Weekly Growth</p>
+                                        <p style={{...styles.miniValue, color: 'var(--success)'}}>+14.2%</p>
+                                    </div>
+                                    <div style={styles.miniStat}>
+                                        <p style={styles.miniLabel}>Active Sessions</p>
+                                        <p style={styles.miniValue}>1,284</p>
+                                    </div>
+                                    <div style={styles.miniStat}>
+                                        <p style={styles.miniLabel}>Conv. Rate</p>
+                                        <p style={styles.miniValue}>3.8%</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="card" style={styles.sectionCard}>
+                                <div style={styles.sectionHeader}>
+                                    <h3 style={styles.sectionTitle}>Critical Alerts</h3>
+                                    <span style={styles.alertCount}>2 New</span>
+                                </div>
+                                <div style={styles.alertList}>
+                                    <div style={styles.alertItem}>
+                                        <div style={{...styles.alertIcon, color: 'var(--error)'}}><AlertCircle size={18}/></div>
+                                        <div>
+                                            <p style={styles.alertTitle}>NGO "Save Earth" failed verification</p>
+                                            <p style={styles.alertTime}>15 mins ago</p>
+                                        </div>
+                                    </div>
+                                    <div style={styles.alertItem}>
+                                        <div style={{...styles.alertIcon, color: 'var(--warning)'}}><AlertCircle size={18}/></div>
+                                        <div>
+                                            <p style={styles.alertTitle}>Large donation of ₹1.5L needs review</p>
+                                            <p style={styles.alertTime}>1 hour ago</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style={styles.divider}></div>
+                                <h3 style={{...styles.sectionTitle, marginTop: '1.5rem'}}>Top Performing NGOs</h3>
+                                <div style={styles.ngoList}>
+                                    {analytics?.campaignStats.slice(0, 3).map(camp => (
+                                        <div key={camp._id} style={styles.ngoItem}>
+                                            <div style={styles.ngoAvatar}>{camp.title[0]}</div>
+                                            <div style={{flex: 1}}>
+                                                <p style={styles.ngoName}>{camp.title}</p>
+                                                <div style={styles.ngoProgress}>
+                                                    <div style={{...styles.ngoFill, width: `${Math.min((camp.currentAmount / camp.goalAmount) * 100, 100)}%`}}></div>
+                                                </div>
+                                            </div>
+                                            <span style={styles.ngoValue}>₹{camp.currentAmount.toLocaleString()}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'users' && (
+                        <div className="card" style={styles.sectionCard}>
+                            <div style={styles.tableTop}>
+                                <div style={styles.searchWrapper}>
+                                    <Search size={18} />
+                                    <input 
+                                        type="text" 
+                                        placeholder="Search users by name, email or role..." 
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        style={styles.searchInput}
+                                    />
+                                </div>
+                                <div style={styles.tableFilters}>
+                                    <button style={styles.filterBtn}><Filter size={16}/> Filter</button>
+                                </div>
+                            </div>
+                            
+                            <div style={styles.tableWrapper}>
+                                <table style={styles.table}>
+                                    <thead>
+                                        <tr>
+                                            <th>Member</th>
+                                            <th>Account Status</th>
+                                            <th>Role</th>
+                                            <th>Last Login</th>
+                                            <th>Security</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {filteredUsers.map(u => (
+                                            <tr key={u._id} style={styles.tr}>
+                                                <td>
+                                                    <div style={styles.userCell}>
+                                                        <div style={styles.userAvatarSmall}>{u.name[0]}</div>
+                                                        <div>
+                                                            <p style={styles.userName}>{u.name}</p>
+                                                            <p style={styles.userEmail}>{u.email}</p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <span style={{
+                                                        ...styles.statusBadge,
+                                                        backgroundColor: u.isBlocked ? 'rgba(234, 67, 53, 0.1)' : 'rgba(52, 168, 83, 0.1)',
+                                                        color: u.isBlocked ? 'var(--error)' : 'var(--success)'
+                                                    }}>
+                                                        {u.isBlocked ? 'Blocked' : 'Active'}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span style={styles.roleBadge}>{u.role}</span>
+                                                </td>
+                                                <td>{new Date().toLocaleDateString()}</td>
+                                                <td>
+                                                    <button 
+                                                        onClick={() => handleBlockToggle(u._id)}
+                                                        style={{...styles.actionBtn, color: u.isBlocked ? 'var(--success)' : 'var(--error)'}}
+                                                    >
+                                                        {u.isBlocked ? <Unlock size={18}/> : <Lock size={18}/>}
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'donations' && (
+                        <div className="card" style={styles.sectionCard}>
+                            <h3 style={styles.sectionTitle}>Transaction History</h3>
+                            <div style={styles.tableWrapper}>
+                                <table style={styles.table}>
+                                    <thead>
+                                        <tr>
+                                            <th>Donor</th>
+                                            <th>Campaign</th>
+                                            <th>Amount</th>
+                                            <th>Status</th>
+                                            <th>Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {donations.map(d => (
+                                            <tr key={d._id} style={styles.tr}>
+                                                <td>
+                                                    <div style={styles.userCell}>
+                                                        <div>
+                                                            <p style={styles.userName}>{d.donorName}</p>
+                                                            <p style={styles.userEmail}>{d.donorEmail}</p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>{d.campaignId?.title || 'General'}</td>
+                                                <td>₹{d.amount.toLocaleString()}</td>
+                                                <td>
+                                                    <span style={{ 
+                                                        ...styles.statusBadge, 
+                                                        backgroundColor: d.status === 'completed' ? 'rgba(52, 168, 83, 0.1)' : 'rgba(251, 188, 4, 0.1)',
+                                                        color: d.status === 'completed' ? 'var(--success)' : 'var(--warning)'
+                                                    }}>
+                                                        {d.status}
+                                                    </span>
+                                                </td>
+                                                <td>{new Date(d.createdAt).toLocaleDateString()}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'audit' && (
+                        <div className="card" style={styles.sectionCard}>
+                            <div style={styles.sectionHeader}>
+                                <h3 style={styles.sectionTitle}>System Security Audit Logs</h3>
+                            </div>
+                            <div style={styles.auditList}>
+                                {auditLogs.map(log => (
+                                    <div key={log._id} style={styles.auditItem}>
+                                        <div style={styles.auditIcon}><Activity size={16}/></div>
+                                        <div style={styles.auditMain}>
+                                            <p style={styles.auditAction}>{log.action.replace(/_/g, ' ')}</p>
+                                            <p style={styles.auditDetails}>{log.details}</p>
+                                            <p style={styles.auditMeta}>
+                                                <strong>{log.performedBy?.name || 'System'}</strong> • {new Date(log.createdAt).toLocaleString()}
+                                            </p>
+                                        </div>
+                                        <div style={styles.auditTag}>{log.action.split('_')[0]}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </motion.div>
+            </AnimatePresence>
+        </motion.div>
+    );
 
 const styles = {
-    container: { padding: '2rem', maxWidth: '1400px', margin: '0 auto' },
-    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' },
-    title: { fontSize: '2rem', marginBottom: '0.5rem' },
-    subtitle: { color: 'var(--text-secondary)' },
-    exportBtn: { background: 'var(--bg-surface)', color: 'var(--text-primary)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.2rem' },
-    statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' },
-    statCard: { background: 'var(--bg-surface)', padding: '1.5rem', borderRadius: '20px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '1.2rem' },
-    iconWrapper: { width: '50px', height: '50px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-    statLabel: { color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '0.2rem' },
-    statValue: { fontSize: '1.5rem', fontWeight: 'bold' },
-    statChange: { fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.2rem' },
-    tabBar: { display: 'flex', gap: '2rem', borderBottom: '1px solid var(--border)', marginBottom: '2rem' },
-    tabItem: { background: 'none', border: 'none', padding: '1rem 0.5rem', cursor: 'pointer', fontSize: '1rem', fontWeight: '500', transition: 'all 0.2s' },
-    contentArea: { minHeight: '400px' },
-    overviewGrid: { display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '1.5rem' },
-    sectionCard: { background: 'var(--bg-surface)', padding: '1.5rem', borderRadius: '24px', border: '1px solid var(--border)' },
-    sectionTitle: { fontSize: '1.2rem', marginBottom: '1.5rem' },
-    logList: { display: 'flex', flexDirection: 'column', gap: '1.2rem' },
-    logItem: { display: 'flex', gap: '1rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border)' },
-    logIcon: { width: '32px', height: '32px', borderRadius: '8px', background: 'var(--glass)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)' },
-    logDetails: { flex: 1 },
-    logAction: { fontWeight: '600', fontSize: '0.9rem', textTransform: 'capitalize' },
-    logInfo: { fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0.2rem 0' },
-    logMeta: { fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)' },
-    topCampaignsList: { display: 'flex', flexDirection: 'column', gap: '1.5rem' },
-    campaignItem: { display: 'flex', flexDirection: 'column', gap: '0.5rem' },
-    campInfo: { display: 'flex', justifyContent: 'space-between' },
-    campTitle: { fontWeight: '500', fontSize: '0.95rem' },
-    campAmount: { color: 'var(--primary)', fontSize: '0.9rem', fontWeight: '600' },
-    campProgressWrapper: { height: '8px', background: 'var(--bg-dark)', borderRadius: '4px', overflow: 'hidden' },
-    campProgressBar: { height: '100%', background: 'var(--primary)', borderRadius: '4px' },
-    tableHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' },
-    searchBox: { display: 'flex', alignItems: 'center', gap: '0.8rem', background: 'var(--bg-dark)', padding: '0.5rem 1rem', borderRadius: '12px', border: '1px solid var(--border)', width: '300px' },
-    searchInput: { background: 'none', border: 'none', color: 'white', width: '100%', outline: 'none' },
+    container: { display: 'flex', flexDirection: 'column', gap: '2.5rem', padding: '1rem 0 4rem' },
+    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' },
+    headerTitle: { textAlign: 'left' },
+    headerBadge: { display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 0.8rem', background: 'var(--glass)', border: '1px solid var(--border)', borderRadius: '100px', fontSize: '0.75rem', fontWeight: '800', color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem' },
+    title: { fontSize: '2.5rem', fontWeight: '900', marginBottom: '0.5rem' },
+    subtitle: { color: 'var(--text-secondary)', fontSize: '1rem' },
+    headerActions: { display: 'flex', gap: '1rem' },
+    kpiGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem' },
+    kpiCard: { padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' },
+    kpiTop: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+    iconWrapper: { width: '44px', height: '44px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+    trend: { fontSize: '0.8rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '0.2rem' },
+    kpiBottom: { display: 'flex', flexDirection: 'column', gap: '0.2rem' },
+    kpiValue: { fontSize: '1.75rem', fontWeight: '800', margin: 0 },
+    kpiLabel: { fontSize: '0.9rem', fontWeight: '700', color: 'var(--text-primary)', margin: 0 },
+    kpiSub: { fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 },
+    tabContainer: { borderBottom: '1px solid var(--border)' },
+    tabs: { display: 'flex', gap: '2rem' },
+    tabItem: { background: 'none', border: 'none', borderBottom: '2px solid transparent', padding: '1rem 0.5rem', cursor: 'pointer', fontSize: '0.95rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '0.75rem', transition: 'all 0.2s' },
+    tabContent: { marginTop: '0.5rem' },
+    overviewGrid: { display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '1.5rem' },
+    sectionCard: { padding: '1.75rem' },
+    sectionHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.75rem' },
+    sectionTitle: { fontSize: '1.1rem', fontWeight: '800', margin: 0 },
+    chartPlaceholder: { height: '240px', background: 'var(--glass)', borderRadius: '20px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem' },
+    statsRow: { display: 'flex', justifyContent: 'space-around', padding: '1rem', background: 'var(--glass)', borderRadius: '16px' },
+    miniStat: { textAlign: 'center' },
+    miniLabel: { fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem' },
+    miniValue: { fontSize: '1.1rem', fontWeight: '800' },
+    alertCount: { background: 'var(--error)', color: '#fff', fontSize: '0.7rem', fontWeight: '800', padding: '0.25rem 0.6rem', borderRadius: '100px' },
+    alertList: { display: 'flex', flexDirection: 'column', gap: '1.25rem' },
+    alertItem: { display: 'flex', gap: '1rem', alignItems: 'flex-start' },
+    alertIcon: { width: '36px', height: '36px', background: 'var(--glass)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+    alertTitle: { fontSize: '0.9rem', fontWeight: '600', margin: 0, lineHeight: '1.4' },
+    alertTime: { fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 },
+    divider: { height: '1px', background: 'var(--border)', margin: '1.5rem 0' },
+    ngoList: { display: 'flex', flexDirection: 'column', gap: '1.25rem' },
+    ngoItem: { display: 'flex', alignItems: 'center', gap: '1rem' },
+    ngoAvatar: { width: '36px', height: '36px', background: 'var(--glass-heavy)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', color: 'var(--primary)' },
+    ngoName: { fontSize: '0.9rem', fontWeight: '700', margin: 0 },
+    ngoProgress: { height: '6px', background: 'var(--glass)', borderRadius: '10px', marginTop: '0.4rem', overflow: 'hidden' },
+    ngoFill: { height: '100%', background: 'var(--gradient-main)', borderRadius: '10px' },
+    ngoValue: { fontSize: '0.9rem', fontWeight: '700', color: 'var(--primary)' },
+    tableTop: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' },
+    searchWrapper: { position: 'relative', flex: 1, maxWidth: '400px', display: 'flex', alignItems: 'center' },
+    searchInput: { paddingLeft: '3rem', background: 'var(--glass)', borderRadius: '14px' },
+    tableFilters: { display: 'flex', gap: '1rem' },
+    filterBtn: { background: 'var(--glass)', border: '1px solid var(--border)', padding: '0.75rem 1.25rem', borderRadius: '14px', fontSize: '0.9rem', fontWeight: '700', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.6rem' },
     tableWrapper: { overflowX: 'auto' },
     table: { width: '100%', borderCollapse: 'collapse', textAlign: 'left' },
-    userNameCell: { display: 'flex', alignItems: 'center', gap: '0.8rem' },
-    avatar: { width: '36px', height: '36px', borderRadius: '10px', background: 'var(--primary)', color: 'black', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' },
-    userName: { fontWeight: '600', fontSize: '0.95rem' },
-    userEmail: { fontSize: '0.85rem', color: 'var(--text-secondary)' },
-    badge: { padding: '0.3rem 0.8rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase' },
-    iconBtn: { padding: '0.5rem', borderRadius: '8px', border: 'none', cursor: 'pointer', transition: 'all 0.2s' },
-    logActionBadge: { background: 'var(--glass)', color: 'var(--primary)', padding: '0.2rem 0.6rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 'bold' }
+    tr: { borderBottom: '1px solid var(--border)', transition: 'background 0.2s' },
+    userCell: { display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem 0' },
+    userAvatarSmall: { width: '40px', height: '40px', background: 'var(--primary)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontWeight: '800' },
+    userName: { fontWeight: '700', fontSize: '0.95rem', margin: 0 },
+    userEmail: { fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 },
+    statusBadge: { padding: '0.35rem 0.8rem', borderRadius: '100px', fontSize: '0.75rem', fontWeight: '800' },
+    roleBadge: { padding: '0.35rem 0.8rem', background: 'var(--glass)', border: '1px solid var(--border)', borderRadius: '100px', fontSize: '0.75rem', fontWeight: '800', color: 'var(--text-secondary)' },
+    actionBtn: { background: 'none', border: 'none', cursor: 'pointer', padding: '0.5rem', borderRadius: '8px', transition: 'all 0.2s' },
+    auditList: { display: 'flex', flexDirection: 'column', gap: '0.75rem' },
+    auditItem: { display: 'flex', alignItems: 'center', gap: '1.25rem', padding: '1.25rem', borderRadius: '16px', border: '1px solid var(--border)', background: 'var(--glass)' },
+    auditIcon: { width: '40px', height: '40px', background: 'var(--bg-dark)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', flexShrink: 0 },
+    auditMain: { flex: 1 },
+    auditAction: { fontSize: '0.95rem', fontWeight: '700', color: 'var(--text-primary)', margin: 0, textTransform: 'capitalize' },
+    auditDetails: { fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0.2rem 0' },
+    auditMeta: { fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 },
+    auditTag: { fontSize: '0.65rem', fontWeight: '800', padding: '0.25rem 0.6rem', background: 'var(--glass-heavy)', borderRadius: '6px', color: 'var(--text-muted)', textTransform: 'uppercase' }
 };
 
 export default AdminDashboard;

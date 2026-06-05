@@ -31,9 +31,10 @@ const styles = {
     },
     barForeground: {
         height: '100%',
-        background: 'var(--gradient-main)',
-        transition: 'width 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
-        borderRadius: '100px'
+        background: 'linear-gradient(90deg, var(--primary) 0%, #4CAF50 100%)',
+        transition: 'width 1s cubic-bezier(0.4, 0, 0.2, 1)',
+        borderRadius: '100px',
+        boxShadow: '0 0 10px rgba(138, 180, 248, 0.3)'
     },
     labels: {
         display: 'flex',

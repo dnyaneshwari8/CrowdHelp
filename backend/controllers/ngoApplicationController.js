@@ -1,6 +1,6 @@
 const NGOApplication = require('../models/NGOApplication');
 const User = require('../models/User');
-const { emailService, notificationService } = require('../services/emailService');
+const { sendConfirmationEmail } = require('../utils/emailSender');
 
 /**
  * Submit an NGO application
@@ -50,36 +50,22 @@ exports.submitApplication = async (req, res) => {
         // Handle file uploads (logo and certificate)
         if (req.files) {
             if (req.files.logo) {
-                applicationData.logo = `/uploads/${req.files.logo[0].filename}`;
+                applicationData.logo = req.files.logo[0].path;
             }
             if (req.files.certificate) {
-                applicationData.certificate = `/uploads/${req.files.certificate[0].filename}`;
+                applicationData.certificate = req.files.certificate[0].path;
             }
         }
 
         const application = await NGOApplication.create(applicationData);
 
-        // Create notification for user
-        await notificationService.create(
-            req.user.id,
-            'NGO Application Submitted',
-            `Your application for "${organizationName}" has been successfully received and is under review.`,
-            'NGO_APPLICATION_SUBMITTED'
-        );
-
-        // Notify Admin (get any admin user)
-        const adminUser = await User.findOne({ role: 'ADMIN' });
-        if (adminUser) {
-            await notificationService.create(
-                adminUser._id,
-                'New NGO Application Pending',
-                `A new NGO application for "${organizationName}" requires review.`,
-                'NGO_APPLICATION_SUBMITTED'
-            );
-        }
-
         // Send confirmation email
-        await emailService.sendNGOApplicationSubmitted(req.user);
+        await sendConfirmationEmail(
+            { donorEmail: req.user.email, donorName: req.user.name },
+            null,
+            `Thank you for applying to become an NGO partner on CrowdHelp. Your application for "${organizationName}" (Reg No: ${registrationNumber}) has been received and is currently under review.\n\nWe will notify you once the admin has reviewed your application.\n\nBest Regards,\nCrowdHelp Team`,
+            'NGO Application Received'
+        );
 
         res.status(201).json({
             status: 'success',

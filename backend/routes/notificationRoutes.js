@@ -3,13 +3,10 @@ const router = express.Router();
 const notificationController = require('../controllers/notificationController');
 const { protect } = require('../middleware/authMiddleware');
 
-// All notification routes are protected
 router.use(protect);
 
 router.get('/', notificationController.getNotifications);
-router.get('/unread-count', notificationController.getUnreadCount);
-router.put('/read-all', notificationController.markAllRead);
-router.put('/:id/read', notificationController.markAsRead);
-router.delete('/:id', notificationController.deleteNotification);
+router.patch('/mark-all-read', notificationController.markAsRead);
+router.patch('/:id/read', notificationController.markOneAsRead);
 
 module.exports = router;

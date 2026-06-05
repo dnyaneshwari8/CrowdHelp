@@ -7,7 +7,6 @@ const upload = require('../utils/multerConfig');
 // Public routes
 router.get('/', campaignController.getAllCampaigns);
 router.get('/:id', campaignController.getCampaignById);
-router.get('/:id/updates', campaignController.getCampaignUpdates);
 
 // Admin or Approved NGO can create campaigns
 router.post('/', protect, restrictTo('ADMIN', 'NGO'), (req, res, next) => {

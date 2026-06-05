@@ -1,7 +1,7 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { emailService } = require('../services/emailService');
+const { sendConfirmationEmail } = require('../utils/emailSender'); // Reusing existing email sender or creating new one if needed
 
 // Helper function to sign JWT token
 const signToken = (id) => {
@@ -18,11 +18,15 @@ const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString()
  */
 exports.register = async (req, res) => {
     try {
-        const { name, email, phone, password } = req.body;
+        const { name, email, phone, password, confirmPassword } = req.body;
 
         // Validation
-        if (!name || !email || !phone || !password) {
-            return res.status(400).json({ message: 'Please provide all required fields (name, email, phone, password)' });
+        if (!name || !email || !phone || !password || !confirmPassword) {
+            return res.status(400).json({ message: 'Please provide all required fields (name, email, phone, password, confirmPassword)' });
+        }
+
+        if (password !== confirmPassword) {
+            return res.status(400).json({ message: 'Passwords do not match' });
         }
 
         if (password.length < 6) {
@@ -47,11 +51,13 @@ exports.register = async (req, res) => {
             otpExpires
         });
 
-        // Send Welcome Email with OTP
+        // Send OTP via email
         try {
-            await emailService.sendWelcomeEmail(newUser, otp);
+            await sendConfirmationEmail({ donorEmail: email, donorName: name, amount: 'OTP Verification' }, null, `Your OTP for registration is ${otp}`);
         } catch (emailErr) {
             console.error('Email sending failed during registration:', emailErr);
+            // We don't return 500 here because the user is already created in DB
+            // They can use 'resend OTP' later
         }
 
         res.status(201).json({
@@ -89,13 +95,16 @@ exports.register = async (req, res) => {
 exports.verifyOTP = async (req, res) => {
     try {
         const { email, otp, type } = req.body;
+        console.log(`[OTP Verification] Email: ${email}, OTP: ${otp}, Type: ${type}`);
 
         const user = await User.findOne({ email, otp, otpExpires: { $gt: Date.now() } });
 
         if (!user) {
+            console.log(`[OTP Verification] FAILED: Invalid or expired OTP for ${email}`);
             return res.status(400).json({ message: 'Invalid or expired OTP' });
         }
 
+        console.log(`[OTP Verification] SUCCESS for ${email}`);
         if (type === 'registration') {
             user.isVerified = true;
         }
@@ -161,9 +170,11 @@ exports.login = async (req, res) => {
 exports.forgotPassword = async (req, res) => {
     try {
         const { email } = req.body;
+        console.log(`[Forgot Password] Request for: ${email}`);
         const user = await User.findOne({ email });
 
         if (!user) {
+            console.log(`[Forgot Password] User not found: ${email}`);
             return res.status(404).json({ message: 'No user found with this email address' });
         }
 
@@ -172,10 +183,12 @@ exports.forgotPassword = async (req, res) => {
         user.otpExpires = new Date(Date.now() + 10 * 60 * 1000);
         await user.save();
 
-        await emailService.sendForgotPasswordEmail(email, otp);
+        console.log(`[Forgot Password] Attempting to send OTP ${otp} to ${email}`);
+        await sendConfirmationEmail({ donorEmail: email, donorName: user.name, amount: 'Password Reset' }, null, `Your OTP for password reset is ${otp}`, 'Password Reset OTP');
 
         res.status(200).json({ message: 'OTP sent to your email' });
     } catch (error) {
+        console.error('[Forgot Password] ERROR:', error);
         res.status(500).json({ message: error.message });
     }
 };

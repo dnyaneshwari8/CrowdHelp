@@ -1,17 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-    fetchCampaignById, 
-    createOrder, 
-    verifyPayment, 
-    toggleFavorite, 
-    fetchUserProfile,
-    fetchCampaignUpdates 
-} from '../services/api';
+import { motion, AnimatePresence } from 'framer-motion';
+import { fetchCampaignById, createOrder, verifyPayment, toggleFavorite, fetchUserProfile } from '../services/api';
 import ProgressBar from '../components/ProgressBar';
-import Spinner from '../components/Spinner';
+import Skeleton from '../components/Skeleton';
 import { useAuth } from '../context/AuthContext';
-import { Heart, Calendar, Target, ShieldCheck, Share2, ArrowLeft, Megaphone, MessageSquare } from 'lucide-react';
+import { getImageUrl } from '../utils/imageHelper';
+import { 
+    Heart, 
+    Calendar, 
+    Target, 
+    ShieldCheck, 
+    Share2, 
+    ArrowLeft,
+    Users,
+    Info,
+    MessageSquare,
+    Image as ImageIcon,
+    History,
+    CheckCircle2,
+    Lock
+} from 'lucide-react';
 
 const CampaignDetails = () => {
     const { id } = useParams();
@@ -19,23 +28,18 @@ const CampaignDetails = () => {
     const { user } = useAuth();
     
     const [campaign, setCampaign] = useState(null);
-    const [updates, setUpdates] = useState([]);
     const [loading, setLoading] = useState(true);
     const [amount, setAmount] = useState('');
     const [isAnonymous, setIsAnonymous] = useState(false);
     const [isFav, setIsFav] = useState(false);
     const [donating, setDonating] = useState(false);
+    const [activeTab, setActiveTab] = useState('about');
 
     useEffect(() => {
         const loadDetails = async () => {
             try {
-                const [campaignRes, updatesRes] = await Promise.all([
-                    fetchCampaignById(id),
-                    fetchCampaignUpdates(id)
-                ]);
-                
-                setCampaign(campaignRes.data.campaign);
-                setUpdates(updatesRes.data.updates);
+                const response = await fetchCampaignById(id);
+                setCampaign(response.data.campaign);
                 
                 if (user) {
                     const profile = await fetchUserProfile();
@@ -124,124 +128,197 @@ const CampaignDetails = () => {
         }
     };
 
-    if (loading) return <Spinner />;
-    if (!campaign) return <div className="container">Campaign not found.</div>;
-
-    return (
-        <div style={styles.container}>
-            <div style={styles.backNav}>
-                <button onClick={() => navigate(-1)} style={styles.backBtn}>
-                    <ArrowLeft size={20}/> Back
-                </button>
-            </div>
-
-            <div style={styles.layout}>
-                <div style={styles.mainContent}>
-                    <div style={styles.imageWrapper}>
-                        <img src={`http://localhost:5000${campaign.image}`} alt={campaign.title} style={styles.image} />
-                        <div style={styles.categoryBadge}>{campaign.category}</div>
+    if (loading) return (
+        <div style={styles.page}>
+            <div className="container">
+                <div style={styles.breadcrumb}>
+                    <Skeleton width="150px" height="20px" />
+                </div>
+                <div style={styles.grid}>
+                    <div style={styles.mainCol}>
+                        <Skeleton height="500px" style={{ borderRadius: '24px', marginBottom: '2rem' }} />
+                        <Skeleton height="40px" width="70%" style={{ marginBottom: '1rem' }} />
+                        <Skeleton height="20px" width="100%" style={{ marginBottom: '1rem' }} />
+                        <Skeleton height="20px" width="90%" style={{ marginBottom: '1rem' }} />
                     </div>
-                    
-                    <div style={styles.header}>
-                        <h1 style={styles.title}>{campaign.title}</h1>
-                        <div style={styles.headerActions}>
-                            <button onClick={handleFavorite} style={{...styles.actionBtn, color: isFav ? '#f44336' : 'var(--text-secondary)'}}>
-                                <Heart fill={isFav ? '#f44336' : 'none'} size={24}/>
-                            </button>
-                            <button style={styles.actionBtn}>
-                                <Share2 size={24}/>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div style={styles.meta}>
-                        <div style={styles.metaItem}>
-                            <Calendar size={18} color="var(--primary)"/>
-                            <span>Ends: {new Date(campaign.endDate).toLocaleDateString()}</span>
-                        </div>
-                        <div style={styles.metaItem}>
-                            <ShieldCheck size={18} color="#4CAF50"/>
-                            <span>Verified Cause</span>
-                        </div>
-                    </div>
-
-                    <div style={styles.descriptionBox}>
-                        <h2>About this campaign</h2>
-                        <p style={styles.description}>{campaign.description}</p>
-                    </div>
-
-                    {/* Campaign Updates Section */}
-                    <div style={styles.updatesSection}>
-                        <div style={styles.updatesHeader}>
-                            <Megaphone size={24} color="var(--primary)"/>
-                            <h2>Campaign Updates</h2>
-                        </div>
-                        <div style={styles.updateList}>
-                            {updates.length > 0 ? (
-                                updates.map((update, index) => (
-                                    <div key={update._id} style={styles.updateCard}>
-                                        <div style={styles.updateMeta}>
-                                            <span style={styles.updateDate}>
-                                                <Calendar size={14}/>
-                                                {new Date(update.createdAt).toLocaleDateString()}
-                                            </span>
-                                            <span style={styles.updateIndex}>Update #{updates.length - index}</span>
-                                        </div>
-                                        <h3 style={styles.updateTitle}>{update.title}</h3>
-                                        <p style={styles.updateContent}>{update.content}</p>
-                                    </div>
-                                ))
-                            ) : (
-                                <div style={styles.noUpdates}>
-                                    <MessageSquare size={32} color="var(--text-secondary)" style={{ marginBottom: '1rem' }}/>
-                                    <p>No updates have been posted yet. Check back soon!</p>
-                                </div>
-                            )}
+                    <div style={styles.sideCol}>
+                        <div className="card" style={{ padding: '2rem' }}>
+                            <Skeleton height="300px" />
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    );
+    if (!campaign) return <div className="container">Campaign not found.</div>;
 
-                <div style={styles.sidebar}>
-                    <div className="card" style={styles.donateCard}>
-                        <div style={styles.cardHeader}>
-                            <Target size={24} color="var(--primary)"/>
-                            <h3>Fundraising Progress</h3>
+    const percentage = Math.min(Math.round((campaign.currentAmount / campaign.goalAmount) * 100), 100);
+
+    return (
+        <div style={styles.page}>
+            <div className="container">
+                <div style={styles.backNav}>
+                    <button onClick={() => navigate(-1)} style={styles.backBtn}>
+                        <ArrowLeft size={20}/> <span>Back to campaigns</span>
+                    </button>
+                </div>
+
+                <div style={styles.layout}>
+                    <div style={styles.mainCol}>
+                        <div style={styles.imageWrapper}>
+                            <img src={getImageUrl(campaign.image)} alt={campaign.title} style={styles.image} />
+                            <div style={styles.categoryBadge}>{campaign.category}</div>
                         </div>
-                        
-                        <ProgressBar current={campaign.currentAmount} goal={campaign.goalAmount} />
-                        
-                        <form onSubmit={handleDonate} style={styles.form}>
-                            <div style={styles.formGroup}>
-                                <label style={styles.label}>Contribution Amount</label>
-                                <div style={styles.inputWrapper}>
-                                    <span style={styles.currencyPrefix}>₹</span>
+
+                        <div style={styles.campaignHeader}>
+                            <h1 style={styles.title}>{campaign.title}</h1>
+                            <div style={styles.ngoBadge}>
+                                <div style={styles.ngoIcon}><ShieldCheck size={16} color="var(--success)"/></div>
+                                <span>Verified by {campaign.ngoName || 'Partner NGO'}</span>
+                            </div>
+                        </div>
+
+                        <div style={styles.tabContainer}>
+                            <div style={styles.tabs}>
+                                {[
+                                    { id: 'about', label: 'About', icon: <Info size={18}/> },
+                                    { id: 'updates', label: 'Updates', icon: <History size={18}/> },
+                                    { id: 'gallery', label: 'Gallery', icon: <ImageIcon size={18}/> }
+                                ].map(tab => (
+                                    <button 
+                                        key={tab.id}
+                                        onClick={() => setActiveTab(tab.id)}
+                                        style={{
+                                            ...styles.tabBtn,
+                                            color: activeTab === tab.id ? 'var(--primary)' : 'var(--text-secondary)',
+                                            borderBottomColor: activeTab === tab.id ? 'var(--primary)' : 'transparent'
+                                        }}
+                                    >
+                                        {tab.icon} {tab.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div style={styles.tabContent}>
+                            {activeTab === 'about' && (
+                                <motion.div initial={{opacity: 0}} animate={{opacity: 1}} style={styles.aboutContent}>
+                                    <p style={styles.description}>{campaign.description}</p>
+                                    
+                                    <div style={styles.impactGrid}>
+                                        <div style={styles.impactCard}>
+                                            <CheckCircle2 size={24} color="var(--success)"/>
+                                            <p>100% of your donation goes to the cause</p>
+                                        </div>
+                                        <div style={styles.impactCard}>
+                                            <CheckCircle2 size={24} color="var(--success)"/>
+                                            <p>Tax benefits eligible under Section 80G</p>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
+                            {activeTab === 'updates' && (
+                                <motion.div initial={{opacity: 0}} animate={{opacity: 1}} style={styles.emptyState}>
+                                    <MessageSquare size={48} color="var(--text-muted)"/>
+                                    <h3>No updates yet</h3>
+                                    <p>The organizer hasn't posted any updates yet. Check back soon!</p>
+                                </motion.div>
+                            )}
+                            {activeTab === 'gallery' && (
+                                <motion.div initial={{opacity: 0}} animate={{opacity: 1}} style={styles.galleryGrid}>
+                                    <div style={styles.galleryImgWrapper}>
+                                        <img src={getImageUrl(campaign.image)} alt="Gallery" style={styles.galleryImg} />
+                                    </div>
+                                </motion.div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div style={styles.sidebarCol}>
+                        <div className="card" style={styles.stickyCard}>
+                            <div style={styles.sidebarHeader}>
+                                <div style={styles.progressTop}>
+                                    <h2 style={styles.amountRaised}>₹{campaign.currentAmount.toLocaleString()}</h2>
+                                    <span style={styles.raisedLabel}>raised of ₹{campaign.goalAmount.toLocaleString()} goal</span>
+                                </div>
+                                <div style={styles.progressBarBase}>
+                                    <motion.div 
+                                        initial={{ width: 0 }}
+                                        animate={{ width: `${percentage}%` }}
+                                        style={styles.progressBarFill}
+                                    />
+                                </div>
+                                <div style={styles.sidebarStats}>
+                                    <div style={styles.sideStat}>
+                                        <strong>{campaign.donorsCount || 42}</strong>
+                                        <span>donors</span>
+                                    </div>
+                                    <div style={styles.sideStat}>
+                                        <strong>12</strong>
+                                        <span>days left</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <form onSubmit={handleDonate} style={styles.donateForm}>
+                                <div style={styles.inputGroup}>
+                                    <span style={styles.currencySymbol}>₹</span>
                                     <input 
                                         type="number" 
                                         value={amount} 
                                         onChange={(e) => setAmount(e.target.value)} 
-                                        placeholder="500"
+                                        placeholder="Enter amount"
                                         required 
-                                        style={styles.input}
+                                        style={styles.donateInput}
                                     />
                                 </div>
+
+                                <div style={styles.options}>
+                                    <label style={styles.checkboxLabel}>
+                                        <input 
+                                            type="checkbox" 
+                                            checked={isAnonymous} 
+                                            onChange={(e) => setIsAnonymous(e.target.checked)} 
+                                        />
+                                        <span>Donate anonymously</span>
+                                    </label>
+                                </div>
+
+                                <button type="submit" disabled={donating} className="btn btn-primary" style={styles.submitBtn}>
+                                    {donating ? 'Connecting...' : 'Donate Now'}
+                                </button>
+                            </form>
+
+                            <div style={styles.sidebarActions}>
+                                <button onClick={handleFavorite} style={{...styles.favBtn, color: isFav ? 'var(--error)' : 'var(--text-primary)'}}>
+                                    <Heart fill={isFav ? 'var(--error)' : 'none'} size={20}/>
+                                    {isFav ? 'Favorited' : 'Save for later'}
+                                </button>
+                                <button style={styles.shareBtn}>
+                                    <Share2 size={20}/> Share
+                                </button>
                             </div>
-                            <div style={styles.checkboxGroup}>
-                                <input 
-                                    type="checkbox" 
-                                    checked={isAnonymous} 
-                                    onChange={(e) => setIsAnonymous(e.target.checked)} 
-                                    id="anonymous"
-                                    style={styles.checkbox}
-                                />
-                                <label htmlFor="anonymous" style={styles.checkboxLabel}>Donate Anonymously</label>
+
+                            <div style={styles.securityInfo}>
+                                <Lock size={14} color="var(--text-muted)"/>
+                                <span>Secure transaction via Razorpay</span>
                             </div>
-                            <button type="submit" disabled={donating} style={styles.submitBtn}>
-                                {donating ? 'Connecting to Razorpay...' : 'Support this Cause'}
-                            </button>
-                        </form>
-                        <p style={styles.secureMsg}>
-                            <ShieldCheck size={14}/> Secure payment via Razorpay
-                        </p>
+                        </div>
+
+                        <div className="card" style={styles.recentDonorsCard}>
+                            <h3 style={styles.recentTitle}>Recent Donors</h3>
+                            <div style={styles.donorList}>
+                                {[1,2,3].map(i => (
+                                    <div key={i} style={styles.donorItem}>
+                                        <div style={styles.donorAvatar}>{String.fromCharCode(64+i)}</div>
+                                        <div>
+                                            <p style={styles.donorName}>Anonymous Donor</p>
+                                            <p style={styles.donorAmt}>₹1,000 • 2h ago</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -250,242 +327,58 @@ const CampaignDetails = () => {
 };
 
 const styles = {
-    container: {
-        maxWidth: '1280px',
-        margin: '0 auto',
-        padding: '2rem'
-    },
-    backNav: {
-        marginBottom: '2rem'
-    },
-    backBtn: {
-        background: 'none',
-        border: 'none',
-        color: 'var(--text-secondary)',
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.5rem',
-        fontSize: '1rem',
-        fontWeight: '600'
-    },
-    layout: {
-        display: 'grid',
-        gridTemplateColumns: '1.4fr 0.6fr',
-        gap: '4rem'
-    },
-    mainContent: {
-        textAlign: 'left'
-    },
-    imageWrapper: {
-        position: 'relative',
-        borderRadius: '32px',
-        overflow: 'hidden',
-        height: '480px',
-        marginBottom: '3rem',
-        border: '1px solid var(--border)'
-    },
-    image: {
-        width: '100%',
-        height: '100%',
-        objectFit: 'cover'
-    },
-    categoryBadge: {
-        position: 'absolute',
-        top: '1.5rem',
-        left: '1.5rem',
-        background: 'rgba(0, 0, 0, 0.6)',
-        backdropFilter: 'blur(12px)',
-        color: 'var(--primary)',
-        padding: '0.5rem 1.25rem',
-        borderRadius: '100px',
-        fontSize: '0.85rem',
-        fontWeight: '700',
-        textTransform: 'uppercase',
-        border: '1px solid var(--border)'
-    },
-    header: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        marginBottom: '1.5rem',
-        gap: '2rem'
-    },
-    title: {
-        fontSize: '3rem',
-        lineHeight: '1.2',
-        margin: 0
-    },
-    headerActions: {
-        display: 'flex',
-        gap: '1rem'
-    },
-    actionBtn: {
-        background: 'var(--glass)',
-        border: '1px solid var(--border)',
-        padding: '0.75rem',
-        borderRadius: '16px',
-        color: 'var(--text-primary)',
-        width: 'auto'
-    },
-    meta: {
-        display: 'flex',
-        gap: '2.5rem',
-        marginBottom: '3rem'
-    },
-    metaItem: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.75rem',
-        color: 'var(--text-secondary)',
-        fontSize: '1rem',
-        fontWeight: '500'
-    },
-    descriptionBox: {
-        paddingTop: '3rem',
-        borderTop: '1px solid var(--border)'
-    },
-    description: {
-        marginTop: '1.5rem',
-        lineHeight: '1.8',
-        color: 'var(--text-secondary)',
-        fontSize: '1.15rem'
-    },
-    updatesSection: {
-        marginTop: '4rem',
-        paddingTop: '3rem',
-        borderTop: '1px solid var(--border)'
-    },
-    updatesHeader: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '1rem',
-        marginBottom: '2rem'
-    },
-    updateList: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '1.5rem'
-    },
-    updateCard: {
-        background: 'var(--glass)',
-        padding: '2rem',
-        borderRadius: '24px',
-        border: '1px solid var(--border)',
-        textAlign: 'left'
-    },
-    updateMeta: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '1rem',
-        fontSize: '0.85rem',
-        color: 'var(--primary)',
-        fontWeight: '600'
-    },
-    updateDate: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.5rem'
-    },
-    updateIndex: {
-        background: 'var(--primary-light)',
-        padding: '0.25rem 0.75rem',
-        borderRadius: '100px',
-        color: 'var(--primary)'
-    },
-    updateTitle: {
-        fontSize: '1.5rem',
-        marginBottom: '1rem',
-        color: 'var(--text-primary)'
-    },
-    updateContent: {
-        lineHeight: '1.7',
-        color: 'var(--text-secondary)',
-        fontSize: '1.05rem',
-        margin: 0
-    },
-    noUpdates: {
-        textAlign: 'center',
-        padding: '4rem',
-        background: 'var(--glass)',
-        borderRadius: '24px',
-        border: '1px dashed var(--border)',
-        color: 'var(--text-secondary)'
-    },
-    sidebar: {
-        position: 'relative'
-    },
-    donateCard: {
-        position: 'sticky',
-        top: '100px',
-        padding: '2.5rem'
-    },
-    cardHeader: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '1rem',
-        marginBottom: '2rem'
-    },
-    formGroup: {
-        marginBottom: '2rem'
-    },
-    label: {
-        display: 'block',
-        fontSize: '0.9rem',
-        fontWeight: '600',
-        color: 'var(--text-secondary)',
-        marginBottom: '1rem'
-    },
-    inputWrapper: {
-        position: 'relative',
-        display: 'flex',
-        alignItems: 'center'
-    },
-    currencyPrefix: {
-        position: 'absolute',
-        left: '1.25rem',
-        fontSize: '1.25rem',
-        fontWeight: '700',
-        color: 'var(--text-primary)'
-    },
-    input: {
-        paddingLeft: '2.5rem',
-        fontSize: '1.25rem',
-        fontWeight: '700',
-        background: 'var(--bg-surface)'
-    },
-    checkboxGroup: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.75rem',
-        marginBottom: '2.5rem'
-    },
-    checkbox: {
-        width: '20px',
-        height: '20px',
-        accentColor: 'var(--primary)'
-    },
-    checkboxLabel: {
-        fontSize: '0.95rem',
-        color: 'var(--text-secondary)',
-        cursor: 'pointer'
-    },
-    submitBtn: {
-        width: '100%',
-        padding: '1.25rem',
-        fontSize: '1.1rem',
-        fontWeight: '700'
-    },
-    secureMsg: {
-        marginTop: '1.5rem',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '0.5rem',
-        fontSize: '0.8rem',
-        color: 'var(--text-secondary)'
-    }
+    page: { padding: '4rem 0 8rem', backgroundColor: 'var(--bg-dark)' },
+    backNav: { marginBottom: '2.5rem' },
+    backBtn: { background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '1rem', fontWeight: '700' },
+    layout: { display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '5rem', alignItems: 'start' },
+    mainCol: { display: 'flex', flexDirection: 'column', gap: '3rem' },
+    imageWrapper: { position: 'relative', borderRadius: '40px', overflow: 'hidden', height: '540px', boxShadow: 'var(--shadow-xl)', border: '1px solid var(--border)' },
+    image: { width: '100%', height: '100%', objectFit: 'cover' },
+    categoryBadge: { position: 'absolute', top: '2rem', left: '2rem', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(12px)', color: 'var(--primary)', padding: '0.6rem 1.2rem', borderRadius: '100px', fontSize: '0.85rem', fontWeight: '800', textTransform: 'uppercase', border: '1px solid var(--border)' },
+    campaignHeader: { display: 'flex', flexDirection: 'column', gap: '1rem' },
+    title: { fontSize: '3.5rem', fontWeight: '900', lineHeight: '1.1', margin: 0 },
+    ngoBadge: { display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--text-secondary)', fontSize: '1rem', fontWeight: '600' },
+    ngoIcon: { width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(52, 168, 83, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+    tabContainer: { borderBottom: '1px solid var(--border)' },
+    tabs: { display: 'flex', gap: '3rem' },
+    tabBtn: { background: 'none', border: 'none', padding: '1.5rem 0', cursor: 'pointer', fontSize: '1.1rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '0.75rem', transition: 'all 0.2s', borderBottom: '3px solid transparent' },
+    tabContent: { minHeight: '300px' },
+    aboutContent: { display: 'flex', flexDirection: 'column', gap: '2.5rem' },
+    description: { fontSize: '1.2rem', color: 'var(--text-secondary)', lineHeight: '1.8', whiteSpace: 'pre-wrap' },
+    impactGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' },
+    impactCard: { padding: '1.5rem', background: 'var(--glass)', borderRadius: '24px', border: '1px solid var(--border)', display: 'flex', gap: '1rem', alignItems: 'center', fontSize: '1rem', fontWeight: '600' },
+    emptyState: { textAlign: 'center', padding: '5rem 0', color: 'var(--text-muted)' },
+    galleryGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1.5rem' },
+    galleryImgWrapper: { borderRadius: '20px', overflow: 'hidden', height: '200px', border: '1px solid var(--border)' },
+    galleryImg: { width: '100%', height: '100%', objectFit: 'cover' },
+    sidebarCol: { display: 'flex', flexDirection: 'column', gap: '2rem', position: 'sticky', top: '120px' },
+    stickyCard: { padding: '2.5rem', background: 'var(--bg-card)', borderRadius: '32px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-xl)' },
+    sidebarHeader: { marginBottom: '2.5rem' },
+    progressTop: { marginBottom: '1.5rem' },
+    amountRaised: { fontSize: '2.5rem', fontWeight: '900', margin: 0 },
+    raisedLabel: { fontSize: '1rem', color: 'var(--text-muted)', fontWeight: '600' },
+    progressBarBase: { height: '12px', background: 'var(--glass)', borderRadius: '100px', overflow: 'hidden', margin: '1.5rem 0' },
+    progressBarFill: { height: '100%', background: 'var(--gradient-main)', borderRadius: '100px' },
+    sidebarStats: { display: 'flex', gap: '3rem' },
+    sideStat: { display: 'flex', flexDirection: 'column', gap: '0.2rem' },
+    donateForm: { display: 'flex', flexDirection: 'column', gap: '1.5rem' },
+    inputGroup: { position: 'relative' },
+    currencySymbol: { position: 'absolute', left: '1.5rem', top: '50%', transform: 'translateY(-50%)', fontSize: '1.5rem', fontWeight: '700', color: 'var(--text-muted)' },
+    donateInput: { padding: '1.2rem 1.5rem 1.2rem 3.5rem', fontSize: '1.5rem', fontWeight: '800', background: 'var(--bg-dark)', border: '1px solid var(--border)', borderRadius: '18px', color: '#fff' },
+    options: { display: 'flex', alignItems: 'center' },
+    checkboxLabel: { display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', fontSize: '0.95rem', color: 'var(--text-secondary)' },
+    submitBtn: { padding: '1.2rem', fontSize: '1.1rem', fontWeight: '800', width: '100%', borderRadius: '18px' },
+    sidebarActions: { display: 'flex', gap: '1rem', marginTop: '2rem' },
+    favBtn: { flex: 1, padding: '0.8rem', borderRadius: '14px', background: 'var(--glass)', border: '1px solid var(--border)', cursor: 'pointer', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' },
+    shareBtn: { flex: 1, padding: '0.8rem', borderRadius: '14px', background: 'var(--glass)', border: '1px solid var(--border)', cursor: 'pointer', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', color: 'var(--text-primary)' },
+    securityInfo: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginTop: '1.5rem', color: 'var(--text-muted)', fontSize: '0.8rem' },
+    recentDonorsCard: { padding: '2rem' },
+    recentTitle: { fontSize: '1.1rem', fontWeight: '800', marginBottom: '1.5rem' },
+    donorList: { display: 'flex', flexDirection: 'column', gap: '1.5rem' },
+    donorItem: { display: 'flex', gap: '1rem', alignItems: 'center' },
+    donorAvatar: { width: '40px', height: '40px', borderRadius: '12px', background: 'var(--glass-heavy)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', color: 'var(--primary)' },
+    donorName: { fontSize: '0.95rem', fontWeight: '700', margin: 0 },
+    donorAmt: { fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }
 };
 
 export default CampaignDetails;

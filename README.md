@@ -1,102 +1,106 @@
-# 🌟 CrowdHelp - Full-Stack NGO & Crowdfunding Platform
+# 🌟 CrowdHelp - Production-Ready NGO & Crowdfunding Platform
 
-A comprehensive, production-ready MERN (MongoDB, Express, React, Node.js) platform designed to bridge the gap between donors and NGOs. This platform features a robust multi-role system, advanced financial tracking, automated document generation, and a sophisticated notification ecosystem.
+[![React](https://img.shields.io/badge/React-18-blue?logo=react)](https://reactjs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-LTS-green?logo=node.js)](https://nodejs.org/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-Latest-47A248?logo=mongodb)](https://www.mongodb.com/)
+[![Express](https://img.shields.io/badge/Express-4.x-000000?logo=express)](https://expressjs.com/)
+[![Vite](https://img.shields.io/badge/Vite-5.x-646CFF?logo=vite)](https://vitejs.dev/)
+[![License](https://img.shields.io/badge/License-ISC-yellow.svg)](https://opensource.org/licenses/ISC)
+
+CrowdHelp is a sophisticated, full-stack MERN platform designed to facilitate transparent fundraising for NGOs and individuals. It features a complete ecosystem for donors, organizations, and administrators with automated document generation and real-time notifications.
+
+---
+
+## 📖 Table of Contents
+- [🚀 Key Features](#-key-features)
+- [🛠️ Tech Stack](#-tech-stack)
+- [📂 Project Structure](#-project-structure)
+- [📦 Installation & Setup](#-installation--setup)
+- [🏃 How to Run](#-how-to-run)
+- [🛡️ Security & Roles](#-security--roles)
+- [📑 API Summary](#-api-summary)
+
+---
 
 ## 🚀 Key Features
 
 ### **1. Multi-Role Ecosystem**
-- **Donors (Users)**: Browse causes, make secure donations, track impact, and manage their social profile.
-- **NGOs**: Dedicated dashboard to manage campaigns, post updates, track received donations, and manage legal documents.
-- **Admins**: Centralized control panel for platform governance, verification workflows, global analytics, and security auditing.
+- **Donors**: Browse verified causes, secure payments via Razorpay, download tax receipts, and track their donation history.
+- **NGOs**: Custom dashboard for campaign lifecycle management, analytics tracking, and public milestone updates.
+- **Admins**: Centralized governance for approving organizations, verifying campaigns, and monitoring platform-wide audit logs.
 
-### **2. Sophisticated Campaign Management**
-- **Lifecycle Tracking**: Campaigns progress through stages: `Pending` → `Approved` (Live) → `Goal Achieved` → `Completed`.
-- **Public Updates**: NGOs can post real-time updates (milestones, distribution photos) to build trust with donors.
-- **Real-time Progress**: Visual progress bars showing current vs. goal amounts with automatic "Goal Achieved" alerts.
+### **2. Automation & Trust**
+- **Smart Documents**: Instant generation of **PDF Tax Receipts** and **Certificates of Appreciation** using PDFKit.
+- **Milestone Updates**: NGOs can post updates (photos/text) directly to campaign pages to maintain transparency.
+- **Notification Engine**: Integrated in-app alerts and branded emails for 10+ triggers (e.g., goal achieved, application approved).
 
-### **3. Secure Donation & Automation**
-- **Razorpay Integration**: Seamless and secure payment gateway with server-side signature verification.
-- **Automated PDF Generation**: Professional **Tax Receipts** and **Certificates of Appreciation** generated instantly upon successful donation.
-- **Anonymous Giving**: Option for donors to contribute without revealing their identity on public walls.
+### **3. Advanced Analytics**
+- **NGO Insights**: Visual charts (Chart.js) for monthly trends, donor demographics, and campaign performance.
+- **Global Stats**: Admin-level analytics for platform growth and total financial impact.
 
-### **4. Advanced Notification & Email System**
-- **In-App Notifications**: Real-time alerts via a navbar bell and dropdown, with a dedicated management page.
-- **Lifecycle Emails**: 11+ professional HTML email templates for everything from registration OTPs to campaign approval and donation thank-yous.
-- **Smart Attachments**: Automated emailing of donation receipts and certificates directly to the donor.
+### **4. Social Engagement**
+- **Donor Wall & Leaderboard**: Public recognition for contributors (with privacy toggles).
+- **Favorites System**: Users can follow campaigns and receive updates on causes they care about.
 
-### **5. Interactive NGO Dashboard**
-- **Financial Analytics**: Interactive charts (Chart.js) showing donation trends, category distribution, and campaign performance.
-- **Document Hub**: Centralized area for managing NGO registration certificates and branding.
-- **Campaign Control**: Full CRUD operations for organization-specific causes.
-
-### **6. Admin Governance Hub**
-- **Verification Pipeline**: Streamlined interfaces for reviewing NGO applications and campaign submissions.
-- **Audit Logs**: Transparent tracking of all administrative actions for accountability.
-- **Global Insights**: High-level analytics of platform growth and total financial impact.
-
-### **7. Social & Engagement**
-- **Donor Wall**: Public recognition of contributors (with privacy controls).
-- **Leaderboard**: Gamified ranking of top donors to encourage platform engagement.
-- **Favorites**: Users can save campaigns they care about to their watchlist.
+---
 
 ## 🛠️ Tech Stack
 
-- **Frontend**: React 18 (Vite), React Router 6, Chart.js, Lucide-React, Axios.
+- **Frontend**: React 18, Vite, React Router 6, Chart.js, Lucide Icons, Axios.
 - **Backend**: Node.js, Express.js.
-- **Database**: MongoDB with Mongoose (Indexing optimized).
-- **Authentication**: JWT (JSON Web Tokens) with secure HTTP headers.
-- **Payment Gateway**: Razorpay SDK.
-- **Utilities**: PDFKit (Document generation), Nodemailer (Email service), Multer (Secure file uploads).
+- **Database**: MongoDB (Mongoose) with optimized indexing.
+- **Payments**: Razorpay SDK.
+- **Email**: Nodemailer with HTML templates.
+- **Docs**: PDFKit for dynamic document generation.
+
+---
 
 ## 📂 Project Structure
 
 ```text
 donation/
 ├── backend/
-│   ├── config/             # Database & environment setup
-│   ├── controllers/        # Core business logic (Auth, Admin, NGO, Donation, etc.)
-│   ├── middleware/         # RBAC, Auth guards, Global error handling
-│   ├── models/             # Mongoose schemas (User, Campaign, Notification, etc.)
-│   ├── routes/             # API endpoints
-│   ├── services/           # Centralized Email & Notification services
-│   ├── utils/              # PDF & Certificate generators, Multer config
-│   ├── uploads/            # Secure storage for images/documents
-│   ├── receipts/           # Cached PDF receipts
-│   └── certificates/       # Cached PDF certificates
+│   ├── config/             # DB & Env configuration
+│   ├── controllers/        # Business logic (Auth, Admin, NGO, etc.)
+│   ├── middleware/         # Auth guards & RBAC
+│   ├── models/             # Mongoose schemas
+│   ├── routes/             # API endpoint definitions
+│   ├── services/           # Email & Notification logic
+│   ├── utils/              # PDF Generators, Multer (Uploads)
+│   └── uploads/            # Secure file storage
 ├── frontend/
 │   ├── src/
-│   │   ├── components/     # Reusable UI, Navbars, Layouts, Guards
-│   │   ├── context/        # Auth & State management
-│   │   ├── pages/          # Dashboard & Feature pages
-│   │   ├── services/       # Frontend API interaction layer
-│   │   └── App.jsx         # Routing & Main entry
-│   └── public/             # Manifest & Static assets
-└── README.md
+│   │   ├── components/     # UI Kits & Layouts
+│   │   ├── context/        # Auth & State Management
+│   │   ├── pages/          # Feature-rich dashboards
+│   │   └── services/       # API abstraction layer
+│   └── public/             # Manifest & static assets
 ```
+
+---
 
 ## 📦 Installation & Setup
 
 ### **1. Prerequisites**
 - Node.js (v16+)
-- MongoDB (Running locally or via Atlas)
-- Razorpay Account (for keys)
-- Gmail App Password (for email service)
+- Local MongoDB or MongoDB Atlas
+- Razorpay API Keys (Test mode recommended)
 
 ### **2. Backend Setup**
 ```bash
 cd backend
 npm install
 ```
-Create a `.env` file in `backend/`:
+Create a `.env` file in the `backend/` folder:
 ```env
 PORT=5000
 MONGODB_URI=mongodb://127.0.0.1:27017/donation
-JWT_SECRET=your_jwt_secret
+JWT_SECRET=your_long_random_string
 JWT_EXPIRES_IN=30d
-RAZORPAY_KEY_ID=your_key
-RAZORPAY_SECRET=your_secret
-EMAIL_USER=your_email@gmail.com
-EMAIL_PASS=your_app_password
+RAZORPAY_KEY_ID=your_razorpay_key
+RAZORPAY_SECRET=your_razorpay_secret
+EMAIL_USER=your_gmail@gmail.com
+EMAIL_PASS=your_gmail_app_password
 FRONTEND_URL=http://localhost:5173
 ```
 
@@ -104,19 +108,51 @@ FRONTEND_URL=http://localhost:5173
 ```bash
 cd ../frontend
 npm install
-npm run dev
 ```
 
-## 🏃 How to Run
-1. Start MongoDB: `net start MongoDB` (Windows) or `brew services start mongodb-community` (Mac).
-2. Start Backend: `cd backend && npm run dev`
-3. Start Frontend: `cd frontend && npm run dev`
+---
 
-## 🛡️ Security Features
-- **JWT Protection**: All sensitive routes are guarded by token verification.
-- **Role-Based Access (RBAC)**: Strict separation of USER, NGO, and ADMIN permissions.
-- **File Validation**: Multer configuration strictly validates image and PDF types.
-- **DB Indexing**: High-performance indexes on notifications and donations for rapid data retrieval.
+## 🏃 How to Run
+
+1. **Start Database**: Ensure MongoDB service is running.
+2. **Launch Backend**:
+   ```bash
+   cd backend
+   npm run dev
+   ```
+3. **Launch Frontend**:
+   ```bash
+   cd frontend
+   npm run dev
+   ```
+
+---
+
+## 🛡️ Security & Roles
+
+| Role | Permissions |
+| :--- | :--- |
+| **USER** | Browse, Donate, Favorite, Apply for NGO, View Certificates. |
+| **NGO** | Create/Edit/Update own Campaigns, View Received Donations, Upload Docs. |
+| **ADMIN** | Manage Users, Approve/Reject NGOs & Campaigns, View Audit Logs. |
+
+- **JWT Auth**: All sensitive operations require a valid JSON Web Token.
+- **OTP Verification**: Email-based OTP for registration and password recovery.
+- **File Validation**: Strict mime-type checking for images and PDFs.
+
+---
+
+## 📑 API Summary
+
+| Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `/api/auth` | POST | Login, Register, OTP Verify. |
+| `/api/ngo` | GET/POST | NGO Dashboard, Analytics, Campaign CRUD. |
+| `/api/admin` | GET/POST | Governance, Approvals, Audit Logs. |
+| `/api/notifications` | GET/PUT | User-specific notifications & unread counts. |
+| `/api/donations` | GET/POST | Razorpay integration & Receipt generation. |
+
+---
 
 ## 📄 License
-ISC License
+Distributed under the ISC License.

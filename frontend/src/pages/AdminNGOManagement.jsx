@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getImageUrl } from '../utils/imageHelper';
 import { fetchNGOApplications, updateNGOStatus } from '../services/api';
 import Spinner from '../components/Spinner';
 import { Check, X, Building2, Mail, Phone, ExternalLink } from 'lucide-react';
@@ -44,8 +45,8 @@ const AdminNGOManagement = () => {
                     <div key={ngo._id} className="card" style={styles.card}>
                         <div style={styles.header}>
                             <img 
-                                src={ngo.organizationLogo ? `http://localhost:5000${ngo.organizationLogo}` : 'https://placehold.co/60'} 
-                                alt="Logo" 
+                                src={getImageUrl(ngo.organizationLogo)} 
+                                alt={ngo.organizationName} 
                                 style={styles.logo} 
                             />
                             <div>

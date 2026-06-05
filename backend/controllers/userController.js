@@ -1,6 +1,5 @@
 const User = require('../models/User');
 const Donation = require('../models/Donation');
-const { notificationService } = require('../services/emailService');
 
 /**
  * Get current user profile with stats
@@ -43,7 +42,7 @@ exports.updateProfile = async (req, res) => {
         let updateData = { name, phone };
 
         if (req.file) {
-            updateData.profileImage = `/uploads/${req.file.filename}`;
+            updateData.profileImage = req.file.path;
         }
 
         const user = await User.findByIdAndUpdate(req.user.id, updateData, {
@@ -67,18 +66,10 @@ exports.toggleFavorite = async (req, res) => {
 
         const isFavorite = user.favorites.some(id => id.toString() === campaignId);
 
-        if (!isFavorite) {
-            user.favorites.push(campaignId);
-            
-            // Create notification
-            await notificationService.create(
-                req.user.id,
-                'Favorite Saved',
-                'Campaign added to your favorites.',
-                'FAVORITE_SAVED'
-            );
-        } else {
+        if (isFavorite) {
             user.favorites.pull(campaignId);
+        } else {
+            user.favorites.push(campaignId);
         }
 
         await user.save();

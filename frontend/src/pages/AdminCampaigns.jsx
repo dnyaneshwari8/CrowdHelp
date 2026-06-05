@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { fetchCampaigns, fetchAllCampaignsAdmin, fetchNGOCampaigns, createCampaign, updateCampaign, deleteCampaign } from '../services/api';
+import { getImageUrl } from '../utils/imageHelper';
+import { fetchCampaigns, fetchAllCampaignsAdmin, fetchMyCampaigns, createCampaign, updateCampaign, deleteCampaign } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Spinner from '../components/Spinner';
 import { Plus, Edit, Trash2, X } from 'lucide-react';
@@ -32,7 +33,7 @@ const AdminCampaigns = () => {
             if (user?.role === 'ADMIN') {
                 res = await fetchAllCampaignsAdmin();
             } else if (user?.role === 'NGO') {
-                res = await fetchNGOCampaigns();
+                res = await fetchMyCampaigns();
             } else {
                 res = await fetchCampaigns();
             }
@@ -122,7 +123,7 @@ const AdminCampaigns = () => {
                     <tbody>
                         {campaigns.map(c => (
                             <tr key={c._id}>
-                                <td><img src={`http://localhost:5000${c.image}`} alt="" style={styles.thumbnail} /></td>
+                                <td><img src={getImageUrl(c.image)} alt="" style={styles.thumbnail} /></td>
                                 <td>{c.title}</td>
                                 <td>{c.category}</td>
                                 <td>₹{c.goalAmount.toLocaleString()}</td>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getImageUrl } from '../utils/imageHelper';
 import { fetchPendingCampaigns, approveCampaign, rejectCampaign } from '../services/api';
 import Spinner from '../components/Spinner';
 import { Check, X, Eye, Calendar, Target, User, Info } from 'lucide-react';
@@ -62,7 +63,7 @@ const AdminCampaignApproval = () => {
                 {campaigns.map(campaign => (
                     <div key={campaign._id} className="card" style={styles.card}>
                         <div style={styles.imageBox}>
-                            <img src={`http://localhost:5000${campaign.image}`} alt="Campaign" style={styles.image} />
+                            <img src={getImageUrl(campaign.image)} alt="Campaign" style={styles.image} />
                             <div style={styles.catBadge}>{campaign.category}</div>
                         </div>
                         <div style={styles.content}>
@@ -101,7 +102,7 @@ const AdminCampaignApproval = () => {
                         </div>
                         
                         <div style={styles.modalBody}>
-                            <img src={`http://localhost:5000${selectedCampaign.image}`} alt="Campaign" style={styles.modalImage} />
+                            <img src={getImageUrl(selectedCampaign.image)} alt="Campaign" style={styles.modalImage} />
                             <div style={styles.modalContent}>
                                 <h3>{selectedCampaign.title}</h3>
                                 <p style={styles.fullDesc}>{selectedCampaign.description}</p>

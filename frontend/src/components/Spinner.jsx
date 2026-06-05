@@ -1,9 +1,14 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 
-const Spinner = ({ message = 'Loading...' }) => {
+const Spinner = ({ message = 'Loading impact...' }) => {
     return (
         <div style={styles.spinnerContainer}>
-            <div style={styles.spinner}></div>
+            <motion.div 
+                animate={{ rotate: 360 }}
+                transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                style={styles.spinner}
+            />
             <p style={styles.text}>{message}</p>
         </div>
     );
@@ -15,33 +20,23 @@ const styles = {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '2rem',
-        minHeight: '200px'
+        padding: '5rem 2rem',
+        width: '100%'
     },
     spinner: {
-        width: '40px',
-        height: '40px',
-        border: '4px solid #1e293b',
-        borderTop: '4px solid #22c55e',
+        width: '48px',
+        height: '48px',
+        border: '3px solid var(--glass-heavy)',
+        borderTop: '3px solid var(--primary)',
         borderRadius: '50%',
-        animation: 'spin 1s linear infinite',
-        marginBottom: '1rem'
     },
     text: {
-        color: '#94a3b8',
-        fontSize: '0.9rem'
+        marginTop: '1.5rem',
+        fontSize: '1rem',
+        fontWeight: '600',
+        color: 'var(--text-secondary)',
+        letterSpacing: '0.02em'
     }
 };
-
-// Add CSS animation to document
-const styleSheet = document.createElement("style");
-styleSheet.type = "text/css";
-styleSheet.innerText = `
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-`;
-document.head.appendChild(styleSheet);
 
 export default Spinner;

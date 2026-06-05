@@ -32,10 +32,12 @@ const sendConfirmationEmail = async (donation, pdfPath, customMessage, subject) 
     };
 
     try {
+        console.log(`[Email Sender] Sending to ${donation.donorEmail} with subject: ${subject || (customMessage ? 'Verification Code' : 'Donation Successful - Receipt Attached')}`);
         await transporter.sendMail(mailOptions);
-        console.log(`Confirmation email sent to ${donation.donorEmail}`);
+        console.log(`[Email Sender] SUCCESS: Confirmation email sent to ${donation.donorEmail}`);
     } catch (error) {
-        console.error('Error sending email:', error);
+        console.error('[Email Sender] FAILED:', error);
+        throw error; // Rethrow to handle in the controller
     }
 };
 

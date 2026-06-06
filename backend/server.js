@@ -15,6 +15,8 @@ const userRoutes = require('./routes/userRoutes');
 const ngoRoutes = require('./routes/ngoRoutes');
 const ngoApplicationRoutes = require('./routes/ngoApplicationRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const supportRoutes = require('./routes/supportRoutes');
+const errorMiddleware = require('./middleware/errorMiddleware');
 const path = require('path');
 const fs = require('fs');
 
@@ -33,7 +35,13 @@ const certificatesDir = path.join(__dirname, 'certificates');
 });
 
 // 3. Middleware
-app.use(cors());
+const corsOptions = {
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+};
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -59,7 +67,17 @@ app.use('/api/users', userRoutes);
 app.use('/api/ngo', ngoRoutes);
 app.use('/api/ngo-applications', ngoApplicationRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/support', supportRoutes);
 app.use('/api', donationRoutes);
+
+// 404 Handler for undefined API routes
+// This catches any request starting with /api that wasn't handled by the routes above
+app.use('/api', (req, res, next) => {
+    const err = new Error(`Can't find ${req.originalUrl} on this server!`);
+    err.status = 'fail';
+    err.statusCode = 404;
+    next(err);
+});
 
 // Root route
 app.get('/', (req, res) => {
@@ -67,11 +85,7 @@ app.get('/', (req, res) => {
 });
 
 // Global Error Handler
-app.use((err, req, res, next) => {
-    console.error('--- GLOBAL ERROR CAUGHT ---');
-    console.error(err.stack);
-    res.status(500).json({ message: 'Something went wrong on the server', error: err.message });
-});
+app.use(errorMiddleware);
 
 // 5. Connect to Database and then start server
 const startServer = async () => {

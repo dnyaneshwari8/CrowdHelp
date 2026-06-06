@@ -154,10 +154,16 @@ exports.verifyPayment = async (req, res) => {
             });
 
             // Generate Receipt
-            const pdfPath = await generateReceipt(donation);
+            const pdfUrl = await generateReceipt(donation);
             
             // Generate Certificate
-            const certPath = await generateCertificate(donation, campaign);
+            const certUrl = await generateCertificate(donation, campaign);
+            
+            // Update Donation with URLs
+            donation.receiptUrl = pdfUrl;
+            donation.certificateUrl = certUrl;
+            donation.status = 'completed';
+            await donation.save();
             
             // Update User with certificate
             await User.findByIdAndUpdate(donation.userId, {
@@ -165,7 +171,7 @@ exports.verifyPayment = async (req, res) => {
             });
 
             // Send Confirmation Email (Receipt)
-            await sendConfirmationEmail(donation, pdfPath);
+            await sendConfirmationEmail(donation, pdfUrl);
 
             res.status(200).json({
                 message: "Payment Verified Successfully",

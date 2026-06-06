@@ -89,7 +89,18 @@ const AdminCampaigns = () => {
             alert('Campaign saved successfully');
         } catch (error) {
             console.error('Operation failed:', error);
-            const msg = error.response?.data?.message || 'Operation failed. Please check if all fields are filled correctly.';
+            const serverMsg = error.response?.data?.message;
+            const serverErr = error.response?.data?.error;
+            const missingFields = error.response?.data?.missingFields;
+            
+            let msg = serverMsg || 'Operation failed.';
+            if (missingFields && missingFields.length > 0) {
+                msg += ` Missing fields: ${missingFields.join(', ')}`;
+            }
+            if (serverErr) {
+                msg += ` (Error: ${serverErr})`;
+            }
+            
             alert(msg);
         } finally {
             setLoading(false);

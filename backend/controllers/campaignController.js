@@ -79,25 +79,26 @@ exports.createCampaign = async (req, res) => {
         
         const { title, description, category, goalAmount, startDate, endDate } = req.body;
         
-        console.log('--- CAMPAIGN DATA RECEIVED ---');
-        console.log('Title:', title);
-        console.log('Description Length:', description?.length);
-        console.log('Category:', category);
-        console.log('Goal:', goalAmount);
-        console.log('Dates:', { startDate, endDate });
-
+        console.log('--- CAMPAIGN DATA RECEIVED ---', req.body);
+        
         // Basic validation
-        if (!title || !description || !category || !goalAmount || !startDate || !endDate) {
-            const missing = [];
-            if (!title) missing.push('title');
-            if (!description) missing.push('description');
-            if (!category) missing.push('category');
-            if (!goalAmount) missing.push('goalAmount');
-            if (!startDate) missing.push('startDate');
-            if (!endDate) missing.push('endDate');
-            
+        const missing = [];
+        if (!title) missing.push('title');
+        if (!description) missing.push('description');
+        if (!category) missing.push('category');
+        if (goalAmount === undefined || goalAmount === null || goalAmount === '') missing.push('goalAmount');
+        if (!startDate) missing.push('startDate');
+        if (!endDate) missing.push('endDate');
+
+        const sDate = new Date(startDate);
+        const eDate = new Date(endDate);
+
+        if (isNaN(sDate.getTime())) missing.push('valid startDate');
+        if (isNaN(eDate.getTime())) missing.push('valid endDate');
+
+        if (missing.length > 0) {
             return res.status(400).json({ 
-                message: `The following fields are required: ${missing.join(', ')}`,
+                message: `The following fields are required or invalid: ${missing.join(', ')}`,
                 missingFields: missing
             });
         }
@@ -114,8 +115,8 @@ exports.createCampaign = async (req, res) => {
             description,
             category,
             goalAmount: Number(goalAmount),
-            startDate: new Date(startDate),
-            endDate: new Date(endDate),
+            startDate: sDate,
+            endDate: eDate,
             image: req.file.path,
             createdBy: req.user.id,
             createdByRole: role,
@@ -131,19 +132,19 @@ exports.createCampaign = async (req, res) => {
         res.status(201).json({ status: 'success', data: { campaign } });
     } catch (error) {
         console.error('--- CAMPAIGN CREATION ERROR ---');
-        console.error('Error Name:', error.name);
-        console.error('Error Message:', error.message);
-        if (error.errors) {
-            console.error('Validation Errors:', Object.keys(error.errors).map(key => ({
-                field: key,
-                message: error.errors[key].message
-            })));
-        }
+        console.error(error);
         
+        // Handle Mongoose Validation Errors
+        if (error.name === 'ValidationError') {
+            return res.status(400).json({
+                message: 'Validation failed',
+                error: Object.values(error.errors).map(e => e.message).join(', ')
+            });
+        }
+
         res.status(500).json({ 
             message: 'Error creating campaign', 
-            error: error.message,
-            details: error.errors ? Object.values(error.errors).map(e => e.message) : undefined
+            error: error.message
         });
     }
 };

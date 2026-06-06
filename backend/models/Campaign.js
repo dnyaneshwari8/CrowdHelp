@@ -57,4 +57,11 @@ const campaignSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
+// Optimize frequent dashboard and search queries
+campaignSchema.index({ status: 1 });
+campaignSchema.index({ category: 1, status: 1 });
+campaignSchema.index({ createdBy: 1, status: 1 });
+campaignSchema.index({ createdAt: -1 });
+campaignSchema.index({ title: 'text', description: 'text' }); // Enable text search
+
 module.exports = mongoose.model('Campaign', campaignSchema);

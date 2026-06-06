@@ -31,6 +31,26 @@ import {
     exportDonations 
 } from '../services/api';
 import Skeleton from '../components/Skeleton';
+import DashboardLayout from '../components/DashboardLayout';
+import { 
+    LineElement, 
+    CategoryScale, 
+    LinearScale, 
+    PointElement, 
+    Tooltip, 
+    Legend, 
+    Chart as ChartJS 
+} from 'chart.js';
+import { Line } from 'react-chartjs-2';
+
+ChartJS.register(
+    LineElement, 
+    CategoryScale, 
+    LinearScale, 
+    PointElement, 
+    Tooltip, 
+    Legend
+);
 
 const AdminDashboard = () => {
     const [users, setUsers] = useState([]);
@@ -92,54 +112,103 @@ const AdminDashboard = () => {
     );
 
     if (loading) return (
-        <div style={{ ...styles.container, padding: '2rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3rem' }}>
-                <div>
-                    <Skeleton width="300px" height="40px" style={{ marginBottom: '1rem' }} />
-                    <Skeleton width="450px" height="20px" />
+        <DashboardLayout role="ADMIN">
+            <div style={styles.container}>
+                <header style={styles.header}>
+                    <div>
+                        <Skeleton width="300px" height="40px" style={{ marginBottom: '1rem' }} />
+                        <Skeleton width="450px" height="20px" />
+                    </div>
+                </header>
+                <div style={styles.kpiGrid}>
+                    {[1,2,3,4].map(i => (
+                        <div key={i} className="card" style={styles.kpiCard}>
+                            <Skeleton height="150px" />
+                        </div>
+                    ))}
+                </div>
+                <div className="card" style={{ marginTop: '2rem', padding: '2rem' }}>
+                    <Skeleton height="500px" />
                 </div>
             </div>
-            <div style={styles.kpiGrid}>
-                {[1,2,3,4].map(i => (
-                    <div key={i} className="card" style={styles.kpiCard}>
-                        <Skeleton height="120px" />
-                    </div>
-                ))}
-            </div>
-            <div className="card" style={{ marginTop: '2rem', padding: '2rem' }}>
-                <Skeleton height="500px" />
-            </div>
-        </div>
+        </DashboardLayout>
     );
 
     const kpis = analytics ? [
-        { label: 'Verified Donors', value: analytics.totalDonors, sub: 'Active contributors', icon: <Users size={20}/>, color: 'var(--primary)', trend: '+4.2%' },
-        { label: 'Live Campaigns', value: analytics.totalCampaigns, sub: `${analytics.pendingCampaigns} pending`, icon: <Megaphone size={20}/>, color: 'var(--success)', trend: '+2' },
-        { label: 'Partner NGOs', value: analytics.totalNGOs, sub: `${analytics.pendingNGOs} new apps`, icon: <ShieldCheck size={20}/>, color: 'var(--warning)', trend: '+1' },
-        { label: 'Monthly Revenue', value: `₹${analytics.monthlyAmount.toLocaleString()}`, sub: `${analytics.monthlyCount} donations`, icon: <TrendingUp size={20}/>, color: 'var(--primary)', trend: `${analytics.monthlyGrowth}%` }
+        { label: 'Total Raised', value: `₹${analytics.totalAmountRaised.toLocaleString()}`, sub: 'Lifetime platform revenue', icon: <IndianRupee size={20}/>, color: 'var(--primary)', trend: `+${analytics.monthlyGrowth}%` },
+        { label: 'Active Users', value: users.length, sub: `${users.filter(u => u.role === 'USER').length} donors registered`, icon: <Users size={20}/>, color: 'var(--success)', trend: 'Active' },
+        { label: 'Partner NGOs', value: analytics.totalNGOs, sub: `${analytics.pendingNGOs} pending apps`, icon: <ShieldCheck size={20}/>, color: 'var(--warning)', trend: `${analytics.pendingNGOs > 0 ? 'Action Needed' : 'Verified'}` },
+        { label: 'Total Campaigns', value: analytics.totalCampaigns, sub: `${analytics.pendingCampaigns} pending approval`, icon: <Megaphone size={20}/>, color: 'var(--info)', trend: 'Live' }
     ] : [];
 
+    const trendData = {
+        labels: analytics?.trend.map(t => {
+            const date = new Date(t._id.year, t._id.month - 1);
+            return date.toLocaleString('default', { month: 'short' });
+        }) || [],
+        datasets: [
+            {
+                label: 'Donations (₹)',
+                data: analytics?.trend.map(t => t.amount) || [],
+                fill: true,
+                borderColor: '#4285f4',
+                backgroundColor: 'rgba(66, 133, 244, 0.1)',
+                tension: 0.4,
+                pointRadius: 4,
+                pointBackgroundColor: '#4285f4'
+            }
+        ]
+    };
+
+    const chartOptions = {
+        responsive: true,
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                backgroundColor: '#1e1f20',
+                titleColor: '#fff',
+                bodyColor: '#fff',
+                borderColor: 'rgba(255,255,255,0.1)',
+                borderWidth: 1,
+                padding: 12,
+                displayColors: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                grid: { color: 'rgba(255,255,255,0.05)' },
+                ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 10 } }
+            },
+            x: {
+                grid: { display: false },
+                ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 10 } }
+            }
+        }
+    };
+
     return (
-        <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            style={styles.container}
-        >
-            <header style={styles.header}>
-                <div style={styles.headerTitle}>
-                    <div style={styles.headerBadge}><LayoutDashboard size={14}/> System Admin</div>
-                    <h1 style={styles.title}>Platform <span className="gradient-text">Overview</span></h1>
-                    <p style={styles.subtitle}>Enterprise management console for CrowdHelp platform.</p>
-                </div>
-                <div style={styles.headerActions}>
-                    <button onClick={handleExport} disabled={exporting} className="btn btn-secondary">
-                        <Download size={18} /> {exporting ? 'Exporting...' : 'Export Audit Data'}
-                    </button>
-                    <button className="btn btn-primary">
-                        <PlusCircle size={18} /> Add System User
-                    </button>
-                </div>
-            </header>
+        <DashboardLayout role="ADMIN">
+            <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                style={styles.container}
+            >
+                <header style={styles.header}>
+                    <div style={styles.headerTitle}>
+                        <div style={styles.headerBadge}><LayoutDashboard size={14}/> System Admin</div>
+                        <h1 style={styles.title}>Admin <span className="gradient-text">Dashboard</span></h1>
+                        <p style={styles.subtitle}>Real-time overview of platform activity, donations, and growth.</p>
+                    </div>
+                    <div style={styles.headerActions}>
+                        <button className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <PlusCircle size={18} /> New Campaign
+                        </button>
+                        <button onClick={handleExport} disabled={exporting} className="btn btn-secondary">
+                            <Download size={18} /> {exporting ? 'Exporting...' : 'Export Data'}
+                        </button>
+                    </div>
+                </header>
 
             {/* KPI Cards */}
             <div style={styles.kpiGrid}>
@@ -204,6 +273,20 @@ const AdminDashboard = () => {
                         <div style={styles.overviewGrid}>
                             <div className="card" style={styles.sectionCard}>
                                 <div style={styles.sectionHeader}>
+                                    <h3 style={styles.sectionTitle}>Donation Trend</h3>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <TrendingUp size={16} color="var(--success)"/>
+                                        <span style={{color: 'var(--success)', fontWeight: '700'}}>+{analytics?.monthlyGrowth}%</span>
+                                        <span style={{color: 'var(--text-muted)', fontSize: '0.85rem'}}>vs last month</span>
+                                    </div>
+                                </div>
+                                <div style={{ marginBottom: '2rem' }}>
+                                    <Line data={trendData} options={chartOptions} height={80} />
+                                </div>
+                            </div>
+
+                            <div className="card" style={styles.sectionCard}>
+                                <div style={styles.sectionHeader}>
                                     <h3 style={styles.sectionTitle}>Performance Trend</h3>
                                     <button style={styles.iconBtn}><MoreVertical size={18}/></button>
                                 </div>
@@ -249,19 +332,45 @@ const AdminDashboard = () => {
                                 </div>
                                 <div style={styles.divider}></div>
                                 <h3 style={{...styles.sectionTitle, marginTop: '1.5rem'}}>Top Performing NGOs</h3>
-                                <div style={styles.ngoList}>
-                                    {analytics?.campaignStats.slice(0, 3).map(camp => (
-                                        <div key={camp._id} style={styles.ngoItem}>
-                                            <div style={styles.ngoAvatar}>{camp.title[0]}</div>
-                                            <div style={{flex: 1}}>
-                                                <p style={styles.ngoName}>{camp.title}</p>
-                                                <div style={styles.ngoProgress}>
-                                                    <div style={{...styles.ngoFill, width: `${Math.min((camp.currentAmount / camp.goalAmount) * 100, 100)}%`}}></div>
-                                                </div>
-                                            </div>
-                                            <span style={styles.ngoValue}>₹{camp.currentAmount.toLocaleString()}</span>
-                                        </div>
-                                    ))}
+                                <div style={styles.tableWrapper}>
+                                    <table style={styles.table}>
+                                        <thead>
+                                            <tr>
+                                                <th>Campaign</th>
+                                                <th>Raised</th>
+                                                <th>Goal</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {analytics?.campaignStats?.map(camp => (
+                                                <tr key={camp._id} style={styles.tr}>
+                                                    <td style={{ fontWeight: '600' }}>{camp.title}</td>
+                                                    <td>
+                                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                            <span style={{ color: 'var(--success)', fontWeight: '700' }}>₹{camp.currentAmount.toLocaleString()}</span>
+                                                            <div style={styles.ngoProgress}>
+                                                                <div style={{ 
+                                                                    ...styles.ngoFill, 
+                                                                    width: `${Math.min(((camp.currentAmount || 0) / (camp.goalAmount || 1)) * 100, 100)}%` 
+                                                                }}></div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td style={{ color: 'var(--text-muted)' }}>₹{camp.goalAmount.toLocaleString()}</td>
+                                                    <td>
+                                                        <span style={{ 
+                                                            ...styles.statusBadge, 
+                                                            backgroundColor: 'rgba(52, 168, 83, 0.1)', 
+                                                            color: 'var(--success)' 
+                                                        }}>
+                                                            Active
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
@@ -406,8 +515,10 @@ const AdminDashboard = () => {
                     )}
                 </motion.div>
             </AnimatePresence>
-        </motion.div>
+            </motion.div>
+        </DashboardLayout>
     );
+};
 
 const styles = {
     container: { display: 'flex', flexDirection: 'column', gap: '2.5rem', padding: '1rem 0 4rem' },

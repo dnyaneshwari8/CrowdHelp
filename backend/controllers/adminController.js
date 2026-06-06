@@ -128,7 +128,8 @@ exports.getPendingCampaigns = async (req, res) => {
     try {
         const campaigns = await Campaign.find({ status: 'PENDING' })
             .sort('-createdAt')
-            .populate('createdBy', 'name organizationName');
+            .populate('createdBy', 'name organizationName')
+            .populate('ngoId', 'organizationName');
         res.status(200).json({ status: 'success', data: { campaigns } });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -224,7 +225,10 @@ exports.rejectCampaign = async (req, res) => {
  */
 exports.getAllCampaignsForAdmin = async (req, res) => {
     try {
-        const campaigns = await Campaign.find().sort('-createdAt').populate('createdBy', 'name organizationName');
+        const campaigns = await Campaign.find()
+            .sort('-createdAt')
+            .populate('createdBy', 'name organizationName')
+            .populate('ngoId', 'organizationName');
         res.status(200).json({ status: 'success', data: { campaigns } });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -291,13 +295,25 @@ exports.getUserDetails = async (req, res) => {
  */
 exports.getAdvancedAnalytics = async (req, res) => {
     try {
-        // Total Donors: For now, count all registered users with role 'USER' as potential donors
-        const totalDonors = await User.countDocuments({ role: 'USER' });
+        // Correct calculation for Total Donors (unique users who have made a successful donation)
+        const totalDonorsResult = await Donation.aggregate([
+            { $match: { status: 'completed' } },
+            { $group: { _id: '$userId' } },
+            { $count: 'total' }
+        ]);
+        const totalDonors = totalDonorsResult.length > 0 ? totalDonorsResult[0].total : 0;
 
         const totalCampaigns = await Campaign.countDocuments({ status: { $in: ['APPROVED', 'COMPLETED'] } });
         const totalNGOs = await User.countDocuments({ role: 'NGO', ngoStatus: 'APPROVED' });
         const pendingNGOs = await NGOApplication.countDocuments({ status: 'PENDING' });
         const pendingCampaigns = await Campaign.countDocuments({ status: 'PENDING' });
+
+        // Total Amount Raised (Platform-wide)
+        const totalAmountResult = await Donation.aggregate([
+            { $match: { status: 'completed' } },
+            { $group: { _id: null, total: { $sum: '$amount' } } }
+        ]);
+        const totalAmountRaised = totalAmountResult.length > 0 ? totalAmountResult[0].total : 0;
         
         // Monthly stats (Current Month)
         const now = new Date();
@@ -364,6 +380,7 @@ exports.getAdvancedAnalytics = async (req, res) => {
                 totalDonors: totalDonors || 0,
                 totalCampaigns: totalCampaigns || 0,
                 totalNGOs: totalNGOs || 0,
+                totalAmountRaised: totalAmountRaised || 0,
                 pendingNGOs: pendingNGOs || 0,
                 pendingCampaigns: pendingCampaigns || 0,
                 monthlyAmount: currentMonthAmount || 0,

@@ -67,6 +67,11 @@ const userSchema = new mongoose.Schema({
     }]
 }, { timestamps: true });
 
+// Optimize frequent dashboard and search queries
+userSchema.index({ role: 1 });
+userSchema.index({ ngoStatus: 1 });
+userSchema.index({ isVerified: 1 });
+
 // Hash password before saving
 userSchema.pre('save', async function() {
     if (!this.isModified('password')) return;

@@ -1,8 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { fetchNGODashboard } from '../services/api';
+import { fetchNGODashboard, fetchNotifications } from '../services/api';
 import Skeleton from '../components/Skeleton';
+import DashboardLayout from '../components/DashboardLayout';
+import { getImageUrl } from '../utils/imageHelper';
+import { 
+    LineElement, 
+    CategoryScale, 
+    LinearScale, 
+    PointElement, 
+    Tooltip, 
+    Legend, 
+    Chart as ChartJS 
+} from 'chart.js';
+import { Line } from 'react-chartjs-2';
+
+ChartJS.register(
+    LineElement, 
+    CategoryScale, 
+    LinearScale, 
+    PointElement, 
+    Tooltip, 
+    Legend
+);
+
 import { 
     LayoutDashboard, 
     Megaphone, 
@@ -15,19 +37,25 @@ import {
     Calendar,
     ArrowUpRight,
     ArrowDownRight,
-    MoreHorizontal
+    MoreHorizontal,
+    CheckCircle2
 } from 'lucide-react';
 
 const NGODashboard = () => {
     const [data, setData] = useState(null);
+    const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
     useEffect(() => {
         const loadData = async () => {
             try {
-                const res = await fetchNGODashboard();
+                const [res, notifs] = await Promise.all([
+                    fetchNGODashboard(),
+                    fetchNotifications()
+                ]);
                 setData(res.data);
+                setNotifications(notifs.data.notifications);
             } catch (error) {
                 console.error('Error loading NGO dashboard:', error);
             } finally {
@@ -67,150 +95,277 @@ const NGODashboard = () => {
         </div>
     );
 
-    const kpis = [
-        { label: 'Total Raised', value: `₹${data.totalAmountRaised.toLocaleString()}`, change: '+12.5%', trend: 'up', icon: <IndianRupee size={24}/>, color: '#34a853' },
-        { label: 'Active Campaigns', value: data.activeCampaigns, change: '+2', trend: 'up', icon: <Megaphone size={24}/>, color: 'var(--primary)' },
-        { label: 'Total Donors', value: data.totalDonations, change: '+18', trend: 'up', icon: <Users size={24}/>, color: '#FF9800' },
-        { label: 'Avg. Donation', value: `₹${Math.round(data.totalAmountRaised / (data.totalDonations || 1)).toLocaleString()}`, change: '-2.4%', trend: 'down', icon: <TrendingUp size={24}/>, color: '#9c27b0' },
-    ];
+    const kpis = data ? [
+        { 
+            label: 'Total Raised', 
+            value: `₹${data.totalAmountRaised.toLocaleString()}`, 
+            change: `${data.monthlyGrowth >= 0 ? '+' : ''}${data.monthlyGrowth}%`, 
+            trend: data.monthlyGrowth >= 0 ? 'up' : 'down', 
+            icon: <IndianRupee size={24}/>, 
+            color: '#34a853' 
+        },
+        { 
+            label: 'Active Campaigns', 
+            value: data.activeCampaigns, 
+            change: `${data.totalCampaigns} total`, 
+            trend: 'up', 
+            icon: <Megaphone size={24}/>, 
+            color: 'var(--primary)' 
+        },
+        { 
+            label: 'Unique Donors', 
+            value: data.uniqueDonors || 0, 
+            change: 'Supporters', 
+            trend: 'up', 
+            icon: <Users size={24}/>, 
+            color: '#FF9800' 
+        },
+        { 
+            label: 'Avg. Donation', 
+            value: `₹${Math.round(data.totalAmountRaised / (data.totalDonations || 1)).toLocaleString()}`, 
+            change: `${data.totalDonations} gifts`, 
+            trend: 'up', 
+            icon: <TrendingUp size={24}/>, 
+            color: '#9c27b0' 
+        },
+    ] : [];
+
+    const trendData = {
+        labels: data?.trend.map(t => {
+            const date = new Date(t._id.year, t._id.month - 1);
+            return date.toLocaleString('default', { month: 'short' });
+        }) || [],
+        datasets: [
+            {
+                label: 'Raised (₹)',
+                data: data?.trend.map(t => t.amount) || [],
+                fill: true,
+                borderColor: '#34a853',
+                backgroundColor: 'rgba(52, 168, 83, 0.1)',
+                tension: 0.4,
+                pointRadius: 4,
+                pointBackgroundColor: '#34a853'
+            }
+        ]
+    };
+
+    const chartOptions = {
+        responsive: true,
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                backgroundColor: '#1e1f20',
+                titleColor: '#fff',
+                bodyColor: '#fff',
+                borderColor: 'rgba(255,255,255,0.1)',
+                borderWidth: 1,
+                padding: 12,
+                displayColors: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                grid: { color: 'rgba(255,255,255,0.05)' },
+                ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 10 } }
+            },
+            x: {
+                grid: { display: false },
+                ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 10 } }
+            }
+        }
+    };
 
     return (
-        <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            style={styles.container}
-        >
-            <div style={styles.header}>
-                <div>
-                    <h1 style={styles.title}>Welcome back, <span className="gradient-text">Organization</span></h1>
-                    <p style={styles.subtitle}>Here's what's happening with your campaigns today.</p>
-                </div>
-                <div style={styles.headerActions}>
-                    <button style={styles.dateFilter}><Calendar size={16}/> Last 30 Days</button>
-                    <Link to="/ngo/my-campaigns" className="btn btn-primary">Create Campaign</Link>
-                </div>
-            </div>
-            
-            <div style={styles.kpiGrid}>
-                {kpis.map((kpi, i) => (
-                    <div key={i} className="card" style={styles.kpiCard}>
-                        <div style={styles.kpiHeader}>
-                            <div style={{...styles.iconBox, backgroundColor: `${kpi.color}15`, color: kpi.color}}>
-                                {kpi.icon}
-                            </div>
-                            <div style={{...styles.trendBadge, color: kpi.trend === 'up' ? 'var(--success)' : 'var(--error)'}}>
-                                {kpi.trend === 'up' ? <ArrowUpRight size={14}/> : <ArrowDownRight size={14}/>}
-                                {kpi.change}
-                            </div>
-                        </div>
-                        <div style={styles.kpiInfo}>
-                            <p style={styles.kpiLabel}>{kpi.label}</p>
-                            <h3 style={styles.kpiValue}>{kpi.value}</h3>
-                        </div>
+        <DashboardLayout role="NGO">
+            <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                style={styles.container}
+            >
+                <div style={styles.header}>
+                    <div>
+                        <h1 style={styles.title}>Welcome back, <span className="gradient-text">Organization</span></h1>
+                        <p style={styles.subtitle}>Here's what's happening with your campaigns today.</p>
                     </div>
-                ))}
-            </div>
-
-            <div style={styles.dashboardGrid}>
-                <div style={styles.mainCol}>
-                    <div className="card" style={styles.sectionCard}>
-                        <div style={styles.sectionHeader}>
-                            <h3 style={styles.sectionTitle}>Campaign Performance</h3>
-                            <Link to="/ngo/my-campaigns" style={styles.viewAll}>View All</Link>
+                    <div style={styles.headerActions}>
+                        <button style={styles.dateFilter}><Calendar size={16}/> Last 30 Days</button>
+                        <Link to="/ngo/my-campaigns" className="btn btn-primary">Create Campaign</Link>
+                    </div>
+                </div>
+                
+                <div style={styles.kpiGrid}>
+                    {kpis.map((kpi, i) => (
+                        <div key={i} className="card" style={styles.kpiCard}>
+                            <div style={styles.kpiHeader}>
+                                <div style={{...styles.iconBox, backgroundColor: `${kpi.color}15`, color: kpi.color}}>
+                                    {kpi.icon}
+                                </div>
+                                <div style={{...styles.trendBadge, color: kpi.trend === 'up' ? 'var(--success)' : 'var(--error)'}}>
+                                    {kpi.trend === 'up' ? <ArrowUpRight size={14}/> : <ArrowDownRight size={14}/>}
+                                    {kpi.change}
+                                </div>
+                            </div>
+                            <div style={styles.kpiInfo}>
+                                <p style={styles.kpiLabel}>{kpi.label}</p>
+                                <h3 style={styles.kpiValue}>{kpi.value}</h3>
+                            </div>
                         </div>
-                        
-                        <div style={styles.tableWrapper}>
-                            <table style={styles.table}>
-                                <thead>
-                                    <tr>
-                                        <th>Campaign</th>
-                                        <th>Status</th>
-                                        <th>Progress</th>
-                                        <th>Raised</th>
-                                        <th></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {data.campaignPerformance.map(campaign => {
-                                        const progress = Math.min(Math.round((campaign.currentAmount / campaign.goalAmount) * 100), 100);
-                                        return (
-                                            <tr key={campaign._id} style={styles.tr}>
-                                                <td>
-                                                    <div style={styles.campCell}>
-                                                        <div style={styles.campThumb}>
-                                                            {campaign.title[0]}
+                    ))}
+                </div>
+
+                <div style={styles.dashboardGrid}>
+                    <div style={styles.mainCol}>
+                        <div className="card" style={styles.sectionCard}>
+                            <div style={styles.sectionHeader}>
+                                <h3 style={styles.sectionTitle}>Donation Trend</h3>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <TrendingUp size={16} color="var(--success)"/>
+                                    <span style={{color: 'var(--success)', fontWeight: '700'}}>+{data?.monthlyGrowth}%</span>
+                                </div>
+                            </div>
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <Line data={trendData} options={chartOptions} height={80} />
+                            </div>
+                        </div>
+
+                        <div className="card" style={styles.sectionCard}>
+                            <div style={styles.sectionHeader}>
+                                <h3 style={styles.sectionTitle}>Campaign Performance</h3>
+                                <Link to="/ngo/my-campaigns" style={styles.viewAll}>View All</Link>
+                            </div>
+                            
+                            <div style={styles.tableWrapper}>
+                                <table style={styles.table}>
+                                    <thead>
+                                        <tr>
+                                            <th>Campaign</th>
+                                            <th>Status</th>
+                                            <th>Progress</th>
+                                            <th>Raised</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {data.campaignPerformance.map(campaign => {
+                                            const progress = Math.min(Math.round((campaign.currentAmount / campaign.goalAmount) * 100), 100);
+                                            return (
+                                                <tr key={campaign._id} style={styles.tr}>
+                                                    <td>
+                                                        <div style={styles.campCell}>
+                                                            <img 
+                                                                src={getImageUrl(campaign.image)} 
+                                                                alt={campaign.title} 
+                                                                style={styles.campThumb} 
+                                                            />
+                                                            <div>
+                                                                <p style={styles.campTitle}>{campaign.title}</p>
+                                                                <p style={styles.campGoal}>Goal: ₹{campaign.goalAmount.toLocaleString()}</p>
+                                                            </div>
                                                         </div>
+                                                    </td>
+                                                    <td>
+                                                        <span style={{
+                                                            ...styles.statusBadge,
+                                                            backgroundColor: campaign.status === 'APPROVED' ? 'rgba(52, 168, 83, 0.1)' : 'rgba(251, 188, 4, 0.1)',
+                                                            color: campaign.status === 'APPROVED' ? '#34a853' : '#fbbc04'
+                                                        }}>
+                                                            {campaign.status.toLowerCase()}
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <div style={styles.progressContainer}>
+                                                            <div style={styles.progressBar}>
+                                                                <div style={{...styles.progressFill, width: `${progress}%`}}></div>
+                                                            </div>
+                                                            <span style={styles.progressText}>{progress}%</span>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <p style={styles.raisedAmt}>₹{campaign.currentAmount.toLocaleString()}</p>
+                                                    </td>
+                                                    <td>
+                                                        <button style={styles.actionBtn}><MoreHorizontal size={18}/></button>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div className="card" style={styles.sectionCard}>
+                            <div style={styles.sectionHeader}>
+                                <h3 style={styles.sectionTitle}>Recent Donations</h3>
+                                <Link to="/ngo/donations" style={styles.viewAll}>View All</Link>
+                            </div>
+                            <div style={styles.tableWrapper}>
+                                <table style={styles.table}>
+                                    <thead>
+                                        <tr>
+                                            <th>Donor</th>
+                                            <th>Campaign</th>
+                                            <th>Amount</th>
+                                            <th>Date</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {data.recentDonations.map(donation => (
+                                            <tr key={donation._id} style={styles.tr}>
+                                                <td style={{ padding: '1rem 0' }}>
+                                                    <div style={styles.donorCell}>
+                                                        <div style={styles.donorAvatar}>{donation.userId?.name[0]}</div>
                                                         <div>
-                                                            <p style={styles.campTitle}>{campaign.title}</p>
-                                                            <p style={styles.campGoal}>Goal: ₹{campaign.goalAmount.toLocaleString()}</p>
+                                                            <p style={styles.campTitle}>{donation.userId?.name || 'Anonymous'}</p>
+                                                            <p style={styles.campGoal}>{donation.userId?.email || 'N/A'}</p>
                                                         </div>
                                                     </div>
                                                 </td>
+                                                <td><p style={styles.campTitle}>{donation.campaignId?.title}</p></td>
+                                                <td><p style={styles.raisedAmt}>₹{donation.amount.toLocaleString()}</p></td>
+                                                <td><p style={styles.campGoal}>{new Date(donation.createdAt).toLocaleDateString()}</p></td>
                                                 <td>
-                                                    <span style={{
-                                                        ...styles.statusBadge,
-                                                        backgroundColor: campaign.status === 'APPROVED' ? 'rgba(52, 168, 83, 0.1)' : 'rgba(251, 188, 4, 0.1)',
-                                                        color: campaign.status === 'APPROVED' ? '#34a853' : '#fbbc04'
-                                                    }}>
-                                                        {campaign.status.toLowerCase()}
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    <div style={styles.progressContainer}>
-                                                        <div style={styles.progressBar}>
-                                                            <div style={{...styles.progressFill, width: `${progress}%`}}></div>
-                                                        </div>
-                                                        <span style={styles.progressText}>{progress}%</span>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--success)', fontSize: '0.8rem', fontWeight: '700' }}>
+                                                        <CheckCircle2 size={14}/> Verified
                                                     </div>
-                                                </td>
-                                                <td>
-                                                    <p style={styles.raisedAmt}>₹{campaign.currentAmount.toLocaleString()}</p>
-                                                </td>
-                                                <td>
-                                                    <button style={styles.actionBtn}><MoreHorizontal size={18}/></button>
                                                 </td>
                                             </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div style={styles.sideCol}>
-                    <div className="card" style={styles.impactCard}>
-                        <h3 style={styles.sectionTitle}>Impact Pulse</h3>
-                        <div style={styles.impactList}>
-                            <div style={styles.impactItem}>
-                                <div style={styles.impactIcon}><Users size={16}/></div>
-                                <div>
-                                    <p style={styles.impactText}>New donor contributed ₹5,000</p>
-                                    <p style={styles.impactTime}>2 hours ago</p>
-                                </div>
+                    <div style={styles.sideCol}>
+                        <div className="card" style={styles.impactCard}>
+                            <h3 style={styles.sectionTitle}>Impact Pulse</h3>
+                            <div style={styles.impactList}>
+                                {notifications.length > 0 ? notifications.slice(0, 5).map(notif => (
+                                    <div key={notif._id} style={styles.impactItem}>
+                                        <div style={styles.impactIcon}>
+                                            {notif.type === 'DONATION_RECEIVED' ? <Users size={16}/> : 
+                                             notif.type === 'GOAL_ACHIEVED' ? <Target size={16}/> : <Sparkles size={16}/>}
+                                        </div>
+                                        <div>
+                                            <p style={styles.impactText}>{notif.message}</p>
+                                            <p style={styles.impactTime}>{new Date(notif.createdAt).toLocaleDateString()}</p>
+                                        </div>
+                                    </div>
+                                )) : (
+                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No recent activity.</p>
+                                )}
                             </div>
-                            <div style={styles.impactItem}>
-                                <div style={styles.impactIcon}><Target size={16}/></div>
-                                <div>
-                                    <p style={styles.impactText}>Campaign reached 75% goal</p>
-                                    <p style={styles.impactTime}>5 hours ago</p>
-                                </div>
-                            </div>
-                            <div style={styles.impactItem}>
-                                <div style={styles.impactIcon}><Sparkles size={16}/></div>
-                                <div>
-                                    <p style={styles.impactText}>Your NGO was featured</p>
-                                    <p style={styles.impactTime}>Yesterday</p>
-                                </div>
-                            </div>
+                            <button className="btn btn-secondary" style={{width: '100%', marginTop: '1.5rem'}} onClick={() => navigate('/notifications')}>
+                                View All Notifications
+                            </button>
                         </div>
-                        <button className="btn btn-secondary" style={{width: '100%', marginTop: '1rem'}}>
-                            View Full Report
-                        </button>
                     </div>
                 </div>
-            </div>
-        </motion.div>
+            </motion.div>
+        </DashboardLayout>
     );
 };
 
@@ -239,7 +394,7 @@ const styles = {
     table: { width: '100%', borderCollapse: 'collapse' },
     tr: { borderBottom: '1px solid var(--border)' },
     campCell: { display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem 0' },
-    campThumb: { width: '40px', height: '40px', background: 'var(--glass-heavy)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', color: 'var(--primary)' },
+    campThumb: { width: '40px', height: '40px', background: 'var(--glass-heavy)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', color: 'var(--primary)', objectFit: 'cover' },
     campTitle: { fontSize: '0.95rem', fontWeight: '700', margin: 0, color: 'var(--text-primary)' },
     campGoal: { fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 },
     statusBadge: { padding: '0.3rem 0.75rem', borderRadius: '100px', fontSize: '0.75rem', fontWeight: '800', textTransform: 'capitalize' },

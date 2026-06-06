@@ -17,15 +17,18 @@ import Register from './pages/Register';
 import OTPVerification from './pages/OTPVerification';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import Contact from './pages/Contact';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminCampaigns from './pages/AdminCampaigns';
 import AdminAnalytics from './pages/AdminAnalytics';
 import AdminNGOManagement from './pages/AdminNGOManagement';
 import AdminNGOApplications from './pages/AdminNGOApplications';
 import AdminCampaignApproval from './pages/AdminCampaignApproval';
+import AdminSupport from './pages/AdminSupport';
 import AdminAuditLogs from './pages/AdminAuditLogs';
 import NGORegistration from './pages/NGORegistration';
 import NGODashboard from './pages/NGODashboard';
+import NGODocuments from './pages/NGODocuments';
 import NGOAnalytics from './pages/NGOAnalytics';
 import NGODonations from './pages/NGODonations';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -54,6 +57,7 @@ function App() {
               <Route path="/campaigns/:id" element={<CampaignDetails />} />
               <Route path="/donor-wall" element={<DonorWall />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
+              <Route path="/contact" element={<Contact />} />
 
               {/* User Protected Routes */}
               <Route path="/" element={<Home />} />
@@ -95,6 +99,7 @@ function App() {
                 </NGORoute>
               }>
                 <Route path="dashboard" element={<NGODashboard />} />
+                <Route path="documents" element={<NGODocuments />} />
                 <Route path="analytics" element={<NGOAnalytics />} />
                 <Route path="donations" element={<NGODonations />} />
                 <Route path="my-campaigns" element={<AdminCampaigns />} />
@@ -124,6 +129,11 @@ function App() {
               <Route path="/admin/campaign-approvals" element={
                 <AdminRoute>
                   <AdminCampaignApproval />
+                </AdminRoute>
+              } />
+              <Route path="/admin/support" element={
+                <AdminRoute>
+                  <AdminSupport />
                 </AdminRoute>
               } />
               <Route path="/admin/audit-logs" element={

@@ -198,14 +198,21 @@ exports.forgotPassword = async (req, res) => {
  */
 exports.resetPassword = async (req, res) => {
     try {
-        const { email, password } = req.body;
-        const user = await User.findOne({ email });
+        const { email, otp, password } = req.body;
+        
+        const user = await User.findOne({ 
+            email, 
+            otp, 
+            otpExpires: { $gt: Date.now() } 
+        });
 
         if (!user) {
-            return res.status(404).json({ message: 'User not found' });
+            return res.status(400).json({ message: 'Invalid or expired OTP. Please request a new one.' });
         }
 
         user.password = password;
+        user.otp = undefined;
+        user.otpExpires = undefined;
         await user.save();
 
         res.status(200).json({ message: 'Password reset successful. You can now login.' });

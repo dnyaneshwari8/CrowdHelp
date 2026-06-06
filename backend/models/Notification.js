@@ -37,4 +37,8 @@ const notificationSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
+// Optimize frequent dashboard and search queries
+notificationSchema.index({ recipient: 1, isRead: 1 });
+notificationSchema.index({ createdAt: -1 });
+
 module.exports = mongoose.model('Notification', notificationSchema);

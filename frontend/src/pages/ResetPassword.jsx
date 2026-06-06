@@ -37,7 +37,7 @@ const ResetPassword = () => {
 
         setLoading(true);
         try {
-            await resetPassword({ email, password: newPassword });
+            await resetPassword({ email, otp, password: newPassword });
             alert('Password reset successful. Please login.');
             navigate('/login');
         } catch (error) {

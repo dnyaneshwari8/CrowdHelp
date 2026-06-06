@@ -215,6 +215,17 @@ export const fetchAllUsers = async (filters = {}) => {
     return response.data;
 };
 
+export const fetchAllNGOs = async () => {
+    const data = await fetchAllUsers({ role: 'NGO' });
+    return {
+        ...data,
+        data: {
+            ...data.data,
+            ngos: data.data.users
+        }
+    };
+};
+
 export const fetchUserDetails = async (id) => {
     const response = await api.get(`/admin/users/${id}`);
     return response.data;
@@ -333,6 +344,29 @@ export const fetchMyNGOApplication = async () => {
 
 export const fetchNGODonations = async () => {
     const response = await api.get('/ngo/donations');
+    return response.data;
+};
+
+export const fetchNGODocuments = async () => {
+    const response = await api.get('/ngo/documents');
+    return response.data;
+};
+
+/**
+ * Support Services
+ */
+export const submitSupportMessage = async (supportData) => {
+    const response = await api.post('/support/submit', supportData);
+    return response.data;
+};
+
+export const fetchAllSupportMessages = async () => {
+    const response = await api.get('/support/all');
+    return response.data;
+};
+
+export const updateSupportMessageStatus = async (id, status) => {
+    const response = await api.patch(`/support/${id}/status`, { status });
     return response.data;
 };
 

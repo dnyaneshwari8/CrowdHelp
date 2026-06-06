@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { fetchAdvancedAnalytics, exportDonations } from '../services/api';
-import Spinner from '../components/Spinner';
+import Skeleton from '../components/Skeleton';
 import { 
     Chart as ChartJS, 
     CategoryScale, 
@@ -14,7 +15,19 @@ import {
     ArcElement
 } from 'chart.js';
 import { Bar, Line, Pie } from 'react-chartjs-2';
-import { FileDown, TrendingUp, Users, Target, IndianRupee } from 'lucide-react';
+import { 
+    FileDown, 
+    TrendingUp, 
+    Users, 
+    Target, 
+    IndianRupee, 
+    BarChart3, 
+    PieChart, 
+    Calendar,
+    ArrowUpRight,
+    ArrowDownRight,
+    Sparkles
+} from 'lucide-react';
 
 ChartJS.register(
     CategoryScale,
@@ -58,7 +71,21 @@ const AdminAnalytics = () => {
         }
     };
 
-    if (loading) return <Spinner />;
+    if (loading) return (
+        <div style={styles.container}>
+            <div style={styles.header}>
+                <Skeleton width="300px" height="40px" />
+                <Skeleton width="200px" height="40px" />
+            </div>
+            <div style={styles.statsGrid}>
+                {[1,2,3,4].map(i => <Skeleton key={i} height="150px" />)}
+            </div>
+            <div style={styles.chartsGrid}>
+                <Skeleton height="400px" />
+                <Skeleton height="400px" />
+            </div>
+        </div>
+    );
 
     const getMonthName = (monthNum) => {
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -70,10 +97,13 @@ const AdminAnalytics = () => {
         datasets: [{
             label: 'Monthly Donations (₹)',
             data: data.trend.map(t => t.amount),
-            borderColor: '#646cff',
-            backgroundColor: 'rgba(100, 108, 255, 0.2)',
+            borderColor: '#8ab4f8',
+            backgroundColor: 'rgba(138, 180, 248, 0.1)',
             fill: true,
-            tension: 0.4
+            tension: 0.4,
+            pointBackgroundColor: '#8ab4f8',
+            pointBorderColor: '#fff',
+            pointHoverRadius: 6
         }]
     };
 
@@ -83,94 +113,108 @@ const AdminAnalytics = () => {
             label: 'Amount Raised',
             data: data.campaignStats.map(c => c.currentAmount),
             backgroundColor: [
-                '#646cff', '#4CAF50', '#FF9800', '#F44336', '#9C27B0'
-            ]
+                'rgba(138, 180, 248, 0.8)', 
+                'rgba(52, 168, 83, 0.8)', 
+                'rgba(251, 188, 4, 0.8)', 
+                'rgba(234, 67, 53, 0.8)', 
+                'rgba(156, 39, 176, 0.8)'
+            ],
+            borderWidth: 0
         }]
     };
 
+    const kpis = [
+        { label: 'Total Donors', value: data.totalDonors, icon: <Users size={24}/>, color: '#8ab4f8' },
+        { label: 'Active Campaigns', value: data.totalCampaigns, icon: <Target size={24}/>, color: '#34a853' },
+        { label: 'Monthly Growth', value: `${data.monthlyGrowth > 0 ? '+' : ''}${data.monthlyGrowth}%`, icon: <TrendingUp size={24}/>, color: '#fbbc04' },
+        { label: 'Monthly Revenue', value: `₹${(data.monthlyAmount || 0).toLocaleString()}`, icon: <IndianRupee size={24}/>, color: '#ea4335' },
+    ];
+
     return (
-        <div style={styles.container}>
+        <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            style={styles.container}
+        >
             <div style={styles.header}>
-                <h1>Platform Analytics</h1>
-                <button onClick={handleExport} disabled={exporting} style={styles.exportBtn}>
-                    <FileDown size={20} /> {exporting ? 'Exporting...' : 'Export Donations (CSV)'}
+                <div>
+                    <h1 style={styles.title}>Platform <span className="gradient-text">Insights</span></h1>
+                    <p style={styles.subtitle}>Real-time analytics and performance metrics.</p>
+                </div>
+                <button onClick={handleExport} disabled={exporting} className="btn btn-secondary">
+                    <FileDown size={20} /> {exporting ? 'Exporting...' : 'Download Report'}
                 </button>
             </div>
 
             <div style={styles.statsGrid}>
-                <div className="card" style={styles.statCard}>
-                    <Users color="#646cff" />
-                    <h3>{data.totalDonors || 0}</h3>
-                    <p>Total Donors</p>
-                </div>
-                <div className="card" style={styles.statCard}>
-                    <Target color="#4CAF50" />
-                    <h3>{data.totalCampaigns || 0}</h3>
-                    <p>Active Campaigns</p>
-                </div>
-                <div className="card" style={styles.statCard}>
-                    <TrendingUp color="#FF9800" />
-                    <h3>{data.monthlyGrowth > 0 ? '+' : ''}{data.monthlyGrowth}%</h3>
-                    <p>Monthly Growth</p>
-                </div>
-                <div className="card" style={styles.statCard}>
-                    <IndianRupee color="#F44336" />
-                    <h3>₹{(data.monthlyAmount || 0).toLocaleString()}</h3>
-                    <p>Monthly Total</p>
-                </div>
+                {kpis.map((kpi, i) => (
+                    <div key={i} className="card" style={styles.statCard}>
+                        <div style={{...styles.iconBox, color: kpi.color, background: `${kpi.color}15`}}>
+                            {kpi.icon}
+                        </div>
+                        <div style={styles.statInfo}>
+                            <h3 style={styles.statValue}>{kpi.value}</h3>
+                            <p style={styles.statLabel}>{kpi.label}</p>
+                        </div>
+                    </div>
+                ))}
             </div>
 
             <div style={styles.chartsGrid}>
                 <div className="card" style={styles.chartCard}>
-                    <h2>Donation Trend</h2>
-                    <Line data={trendData} options={{ responsive: true }} />
+                    <div style={styles.chartHeader}>
+                        <BarChart3 size={20} color="var(--primary)" />
+                        <h2 style={styles.chartTitle}>Revenue Trend</h2>
+                    </div>
+                    <Line data={trendData} options={chartOptions} />
                 </div>
                 <div className="card" style={styles.chartCard}>
-                    <h2>Top Campaigns</h2>
-                    <Pie data={campaignData} options={{ responsive: true }} />
+                    <div style={styles.chartHeader}>
+                        <PieChart size={20} color="var(--success)" />
+                        <h2 style={styles.chartTitle}>Top Performers</h2>
+                    </div>
+                    <Pie data={campaignData} options={chartOptions} />
                 </div>
             </div>
-        </div>
+        </motion.div>
     );
 };
 
-const styles = {
-    container: {
-        maxWidth: '1200px',
-        margin: '2rem auto',
-        padding: '0 2rem'
+const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: {
+            display: false
+        }
     },
-    header: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '2rem'
-    },
-    exportBtn: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.5rem',
-        width: 'auto',
-        backgroundColor: '#4CAF50'
-    },
-    statsGrid: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
-        gap: '1.5rem',
-        marginBottom: '2rem'
-    },
-    statCard: {
-        textAlign: 'center',
-        padding: '2rem'
-    },
-    chartsGrid: {
-        display: 'grid',
-        gridTemplateColumns: '2fr 1fr',
-        gap: '2rem'
-    },
-    chartCard: {
-        padding: '2rem'
+    scales: {
+        y: {
+            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+            ticks: { color: 'rgba(255, 255, 255, 0.5)' }
+        },
+        x: {
+            grid: { display: false },
+            ticks: { color: 'rgba(255, 255, 255, 0.5)' }
+        }
     }
+};
+
+const styles = {
+    container: { maxWidth: '1400px', margin: '2rem auto', padding: '0 2rem' },
+    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '3rem' },
+    title: { fontSize: '2.5rem', fontWeight: '800', marginBottom: '0.5rem' },
+    subtitle: { color: 'var(--text-secondary)', fontSize: '1.1rem' },
+    statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', marginBottom: '3rem' },
+    statCard: { display: 'flex', alignItems: 'center', gap: '1.5rem', padding: '1.5rem' },
+    iconBox: { width: '56px', height: '56px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+    statInfo: { display: 'flex', flexDirection: 'column', gap: '0.25rem' },
+    statValue: { fontSize: '1.75rem', fontWeight: '800', color: 'var(--text-primary)', margin: 0 },
+    statLabel: { fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-muted)', margin: 0 },
+    chartsGrid: { display: 'grid', gridTemplateColumns: '2fr 1.2fr', gap: '2rem', minHeight: '450px' },
+    chartCard: { padding: '2rem', display: 'flex', flexDirection: 'column' },
+    chartHeader: { display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' },
+    chartTitle: { fontSize: '1.25rem', fontWeight: '800', margin: 0 }
 };
 
 export default AdminAnalytics;

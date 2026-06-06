@@ -21,6 +21,7 @@ router.get('/dashboard', ngoController.getDashboardStats);
 router.get('/analytics', ngoController.getNGOAnalytics);
 router.get('/my-campaigns', ngoController.getMyCampaigns);
 router.get('/donations', ngoController.getDonationsReceived);
+router.get('/documents', ngoController.getNGODocuments);
 router.patch('/profile', upload.single('organizationLogo'), ngoController.updateNGOProfile);
 
 module.exports = router;

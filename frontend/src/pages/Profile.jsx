@@ -162,7 +162,7 @@ const Profile = () => {
                 <div style={styles.statsGrid}>
                     {stats.map((stat, i) => (
                         <div key={i} className="card" style={styles.statCard}>
-                            <div style={{...styles.statIcon, backgroundColor: `${stat.color}15", color: stat.color}}>
+                            <div style={{...styles.statIcon, backgroundColor: `${stat.color}15`, color: stat.color}}>
                                 {stat.icon}
                             </div>
                             <div>
@@ -263,7 +263,7 @@ const Profile = () => {
                         <div className="card" style={styles.supportCard}>
                             <h3 style={styles.sideTitle}>Need Help?</h3>
                             <p style={styles.sideText}>Our support team is available 24/7 for any donation or platform issues.</p>
-                            <button className="btn btn-secondary" style={{width: '100%"}}>Contact Support</button>
+                            <button className="btn btn-secondary" style={{width: '100%'}}>Contact Support</button>
                         </div>
                     </div>
                 </div>

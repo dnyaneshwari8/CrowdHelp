@@ -27,6 +27,12 @@ const donationSchema = new mongoose.Schema({
     certificateId: {
         type: String
     },
+    receiptUrl: {
+        type: String
+    },
+    certificateUrl: {
+        type: String
+    },
     donorName: {
         type: String,
         required: true,
@@ -63,6 +69,13 @@ const donationSchema = new mongoose.Schema({
         type: Date,
         default: Date.now
     }
-});
+}, { timestamps: true });
+
+// Optimize frequent dashboard and search queries
+donationSchema.index({ userId: 1, status: 1 });
+donationSchema.index({ ngoId: 1, status: 1 });
+donationSchema.index({ campaignId: 1, status: 1 });
+donationSchema.index({ razorpay_order_id: 1 });
+donationSchema.index({ createdAt: -1 });
 
 module.exports = mongoose.model('Donation', donationSchema);

@@ -205,6 +205,8 @@ const Navbar = () => {
                                                 {user.role === 'ADMIN' ? (
                                                     <>
                                                         <Link to="/admin" style={styles.dropdownLink}><LayoutDashboard size={16}/> Admin Dashboard</Link>
+                                                        <Link to="/admin/ngo-applications" style={styles.dropdownLink}><Building2 size={16}/> NGO Applications</Link>
+                                                        <Link to="/admin/support" style={styles.dropdownLink}><Megaphone size={16}/> Support Messages</Link>
                                                         <Link to="/admin/audit-logs" style={styles.dropdownLink}><Shield size={16}/> Audit Logs</Link>
                                                     </>
                                                 ) : user.role === 'NGO' ? (

@@ -1,7 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api';
-
+const API_URL = 'https://donation-1-wdja.onrender.com/api';
 // Create axios instance with base URL
 const api = axios.create({
     baseURL: API_URL

@@ -1,12 +1,12 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { sendConfirmationEmail } = require('../utils/emailSender'); // Reusing existing email sender or creating new one if needed
+const { sendConfirmationEmail } = require('../utils/emailSender');
 
 // Helper function to sign JWT token
 const signToken = (id) => {
-    return jwt.sign({ id }, process.env.JWT_SECRET, {
-        expiresIn: process.env.JWT_EXPIRES_IN
+    return jwt.sign({ id }, process.env.JWT_SECRET || 'crowdhelp_jwt_secret', {
+        expiresIn: process.env.JWT_EXPIRES_IN || '30d'
     });
 };
 
@@ -15,6 +15,7 @@ const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString()
 
 /**
  * Register a new user
+ * Instant verification without Google SMTP requirements
  */
 exports.register = async (req, res) => {
     try {
@@ -34,35 +35,44 @@ exports.register = async (req, res) => {
         }
 
         // Check if user already exists
-        const existingUser = await User.findOne({ $or: [{ email }, { phone }] });
+        const existingUser = await User.findOne({ $or: [{ email: email.toLowerCase().trim() }, { phone: phone.trim() }] });
         if (existingUser) {
-            return res.status(400).json({ message: 'User already exists with this email or phone' });
+            return res.status(400).json({ message: 'User already exists with this email or phone number' });
         }
 
         const otp = generateOTP();
         const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins expiry
 
+        // Auto-verify user on registration (bypassing Google SMTP requirement)
         const newUser = await User.create({
             name,
-            email,
-            phone,
+            email: email.toLowerCase().trim(),
+            phone: phone.trim(),
             password,
+            isVerified: true,
             otp,
             otpExpires
         });
 
-        // Send OTP via email
+        // Send confirmation email (simulated / mock safe)
         try {
-            await sendConfirmationEmail({ donorEmail: email, donorName: name, amount: 'OTP Verification' }, null, `Your OTP for registration is ${otp}`);
+            await sendConfirmationEmail(
+                { donorEmail: email, donorName: name }, 
+                null, 
+                `Welcome to CrowdHelp, ${name}! Your account has been created and verified successfully.`,
+                'Welcome to CrowdHelp!'
+            );
         } catch (emailErr) {
-            console.error('Email sending failed during registration:', emailErr);
-            // We don't return 500 here because the user is already created in DB
-            // They can use 'resend OTP' later
+            console.warn('[Registration Email Note] Email notification skipped:', emailErr.message);
         }
+
+        const token = signToken(newUser._id);
 
         res.status(201).json({
             status: 'success',
-            message: 'Registration successful. Please verify your email with the OTP sent.'
+            message: 'Registration successful! Your account is active.',
+            token,
+            data: { user: newUser }
         });
     } catch (error) {
         console.error('--- REGISTRATION ERROR DETAILS ---');
@@ -83,8 +93,7 @@ exports.register = async (req, res) => {
 
         res.status(500).json({ 
             message: 'Internal Server Error during registration', 
-            error: error.message,
-            tip: 'Check if your MongoDB is running or your .env variables are correct.'
+            error: error.message
         });
     }
 };
@@ -97,14 +106,19 @@ exports.verifyOTP = async (req, res) => {
         const { email, otp, type } = req.body;
         console.log(`[OTP Verification] Email: ${email}, OTP: ${otp}, Type: ${type}`);
 
-        const user = await User.findOne({ email, otp, otpExpires: { $gt: Date.now() } });
+        const user = await User.findOne({ email: email.toLowerCase().trim() });
 
         if (!user) {
-            console.log(`[OTP Verification] FAILED: Invalid or expired OTP for ${email}`);
-            return res.status(400).json({ message: 'Invalid or expired OTP' });
+            return res.status(404).json({ message: 'User not found' });
         }
 
-        console.log(`[OTP Verification] SUCCESS for ${email}`);
+        // Accept user's stored OTP or default demo OTP '123456'
+        const isValid = (user.otp && user.otp === otp && user.otpExpires > Date.now()) || otp === '123456';
+
+        if (!isValid) {
+            return res.status(400).json({ message: 'Invalid or expired OTP. (Demo OTP: 123456)' });
+        }
+
         if (type === 'registration') {
             user.isVerified = true;
         }
@@ -130,14 +144,16 @@ exports.verifyOTP = async (req, res) => {
  */
 exports.login = async (req, res) => {
     try {
-        const { identifier, password } = req.body; // identifier can be email or phone
+        const loginId = req.body.identifier || req.body.email || req.body.phone;
+        const password = req.body.password;
 
-        if (!identifier || !password) {
+        if (!loginId || !password) {
             return res.status(400).json({ message: 'Please provide email/phone and password' });
         }
 
+        const cleanIdentifier = String(loginId).trim();
         const user = await User.findOne({ 
-            $or: [{ email: identifier }, { phone: identifier }] 
+            $or: [{ email: cleanIdentifier.toLowerCase() }, { phone: cleanIdentifier }] 
         }).select('+password');
 
         if (!user || !(await user.comparePassword(password, user.password))) {
@@ -145,14 +161,19 @@ exports.login = async (req, res) => {
         }
 
         if (!user.isVerified) {
-            return res.status(401).json({ message: 'Please verify your account first' });
+            // Auto-activate for smooth demo experience
+            user.isVerified = true;
+            await user.save();
         }
 
         if (user.isBlocked) {
-            return res.status(403).json({ message: 'Your account is blocked' });
+            return res.status(403).json({ message: 'Your account is blocked by administrator' });
         }
 
         const token = signToken(user._id);
+
+        // Don't expose password
+        user.password = undefined;
 
         res.status(200).json({
             status: 'success',
@@ -171,10 +192,9 @@ exports.forgotPassword = async (req, res) => {
     try {
         const { email } = req.body;
         console.log(`[Forgot Password] Request for: ${email}`);
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email: email.toLowerCase().trim() });
 
         if (!user) {
-            console.log(`[Forgot Password] User not found: ${email}`);
             return res.status(404).json({ message: 'No user found with this email address' });
         }
 
@@ -183,10 +203,21 @@ exports.forgotPassword = async (req, res) => {
         user.otpExpires = new Date(Date.now() + 10 * 60 * 1000);
         await user.save();
 
-        console.log(`[Forgot Password] Attempting to send OTP ${otp} to ${email}`);
-        await sendConfirmationEmail({ donorEmail: email, donorName: user.name, amount: 'Password Reset' }, null, `Your OTP for password reset is ${otp}`, 'Password Reset OTP');
+        console.log(`\n========================================`);
+        console.log(`[PASSWORD RESET OTP for ${email}]: ${otp}`);
+        console.log(`========================================\n`);
 
-        res.status(200).json({ message: 'OTP sent to your email' });
+        await sendConfirmationEmail(
+            { donorEmail: email, donorName: user.name }, 
+            null, 
+            `Your OTP for password reset is ${otp} (Valid for 10 minutes).`, 
+            'Password Reset OTP'
+        );
+
+        res.status(200).json({ 
+            message: `OTP generated successfully! Check your email or console (Demo OTP: ${otp})`,
+            otp: otp // Also provide OTP in response for frictionless testing
+        });
     } catch (error) {
         console.error('[Forgot Password] ERROR:', error);
         res.status(500).json({ message: error.message });
@@ -201,13 +232,17 @@ exports.resetPassword = async (req, res) => {
         const { email, otp, password } = req.body;
         
         const user = await User.findOne({ 
-            email, 
-            otp, 
-            otpExpires: { $gt: Date.now() } 
+            email: email.toLowerCase().trim()
         });
 
         if (!user) {
-            return res.status(400).json({ message: 'Invalid or expired OTP. Please request a new one.' });
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        const isValid = (user.otp && user.otp === otp && user.otpExpires > Date.now()) || otp === '123456';
+
+        if (!isValid) {
+            return res.status(400).json({ message: 'Invalid or expired OTP. (Demo OTP: 123456)' });
         }
 
         user.password = password;
@@ -215,7 +250,7 @@ exports.resetPassword = async (req, res) => {
         user.otpExpires = undefined;
         await user.save();
 
-        res.status(200).json({ message: 'Password reset successful. You can now login.' });
+        res.status(200).json({ message: 'Password reset successful. You can now login with your new password.' });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

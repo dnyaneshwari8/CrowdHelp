@@ -73,6 +73,13 @@ const ResetPassword = () => {
                                 style={styles.input}
                             />
                         </div>
+                        <button 
+                            type="button" 
+                            onClick={() => setOtp('123456')}
+                            style={{ background: 'none', border: '1px dashed var(--border)', color: 'var(--primary)', padding: '0.4rem', borderRadius: '8px', fontSize: '0.75rem', cursor: 'pointer', fontWeight: '600' }}
+                        >
+                            ⚡ Use Demo OTP: 123456
+                        </button>
                         <button type="submit" disabled={loading} style={styles.button}>
                             {loading ? 'Verifying...' : 'Verify OTP'} <ArrowRight size={18}/>
                         </button>

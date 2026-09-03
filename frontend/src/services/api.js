@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'https://donation-1-wdja.onrender.com/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 // Create axios instance with base URL
 const api = axios.create({
     baseURL: API_URL
@@ -16,6 +16,22 @@ api.interceptors.request.use(
         return config;
     },
     (error) => Promise.reject(error)
+);
+
+// Add a response interceptor to handle authentication errors gracefully
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response && error.response.status === 401) {
+            // Token is invalid, expired, or user does not exist in DB
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.dispatchEvent(new CustomEvent('auth:expired', {
+                detail: { message: error.response?.data?.message || 'Session expired. Please log in again.' }
+            }));
+        }
+        return Promise.reject(error);
+    }
 );
 
 /**

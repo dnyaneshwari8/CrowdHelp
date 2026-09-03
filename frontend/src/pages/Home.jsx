@@ -30,9 +30,11 @@ const Home = () => {
         const loadFeatured = async () => {
             try {
                 const res = await fetchCampaigns();
-                setFeatured(res.data.campaigns.slice(0, 3));
+                if (res?.data?.campaigns) {
+                    setFeatured(res.data.campaigns.slice(0, 3));
+                }
             } catch (error) {
-                console.error(error);
+                console.error('Failed to load featured campaigns:', error.message);
             } finally {
                 setLoading(false);
             }
@@ -67,8 +69,13 @@ const Home = () => {
                         transition={{ duration: 0.8 }}
                         style={styles.heroContent}
                     >
-                        <div style={styles.badge}>
-                            <Award size={14} /> <span>Trusted by 50,000+ Donors</span>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '2rem' }}>
+                            <div style={styles.badge}>
+                                <Award size={14} /> <span>Trusted by 50,000+ Donors</span>
+                            </div>
+                            <Link to="/login" style={styles.demoBadge}>
+                                <ShieldCheck size={14} /> <span>Demo Logins Available (Admin / NGO / User)</span>
+                            </Link>
                         </div>
                         <h1 style={styles.heroTitle}>
                             Small Acts, <span className="gradient-text">Big Impact</span>. <br />
@@ -82,8 +89,8 @@ const Home = () => {
                             <Link to="/campaigns" className="btn btn-primary" style={styles.ctaBtn}>
                                 Donate Now <ArrowRight size={20}/>
                             </Link>
-                            <Link to="/apply-ngo" className="btn btn-secondary" style={styles.ctaBtnSecondary}>
-                                Start Fundraising
+                            <Link to="/login" className="btn btn-secondary" style={styles.ctaBtnSecondary}>
+                                Explore Demo Roles
                             </Link>
                         </div>
                     </motion.div>
@@ -263,8 +270,20 @@ const styles = {
         border: '1px solid var(--border)',
         fontSize: '0.85rem',
         fontWeight: '700',
-        color: 'var(--primary)',
-        marginBottom: '2.5rem'
+        color: 'var(--primary)'
+    },
+    demoBadge: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '0.6rem',
+        padding: '0.6rem 1.25rem',
+        borderRadius: '100px',
+        background: 'rgba(52, 168, 83, 0.15)',
+        border: '1px solid rgba(52, 168, 83, 0.3)',
+        fontSize: '0.85rem',
+        fontWeight: '700',
+        color: '#34a853',
+        textDecoration: 'none'
     },
     heroTitle: {
         fontSize: 'clamp(3rem, 6vw, 4.5rem)',

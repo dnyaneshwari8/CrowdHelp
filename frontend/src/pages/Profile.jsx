@@ -90,6 +90,7 @@ const Profile = () => {
     };
 
     if (loading) return <Spinner />;
+    if (!profile) return null;
 
     const stats = [
         { label: 'Total Donated', value: `₹${profile.stats.totalDonated.toLocaleString()}`, icon: <IndianRupee size={20}/>, color: '#34a853' },

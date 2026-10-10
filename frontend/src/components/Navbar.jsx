@@ -48,7 +48,9 @@ const Navbar = () => {
             setNotifications(res.data.notifications);
             setUnreadCount(res.data.unreadCount);
         } catch (error) {
-            console.error('Error fetching notifications:', error);
+            if (error.response?.status !== 401) {
+                console.error('Error fetching notifications:', error);
+            }
         }
     };
 
@@ -479,21 +481,6 @@ const styles = {
         alignItems: 'center',
         justifyContent: 'center'
     },
-    relative: { position: 'relative' },
-    dropdown: {
-        position: 'absolute',
-        top: '120%',
-        right: 0,
-        width: '300px',
-        background: 'var(--bg-card)',
-        border: '1px solid var(--border)',
-        borderRadius: '20px',
-        padding: '1.25rem',
-        boxShadow: 'var(--shadow-xl)'
-    },
-    dropdownHeader: { fontWeight: '800', fontSize: '1.1rem', marginBottom: '1rem' },
-    dropdownItem: { fontSize: '0.9rem', color: 'var(--text-secondary)', padding: '0.75rem 0', borderBottom: '1px solid var(--border)' },
-    viewAll: { display: 'block', textAlign: 'center', marginTop: '1rem', color: 'var(--primary)', fontWeight: '600', fontSize: '0.9rem' },
     profileDropdown: {
         position: 'absolute',
         top: '120%',

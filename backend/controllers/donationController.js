@@ -224,14 +224,101 @@ exports.getLeaderboard = async (req, res) => {
                 $group: {
                     _id: '$userId',
                     totalDonated: { $sum: '$amount' },
-                    donorName: { $first: '$donorName' }
+                    donationCount: { $sum: 1 },
+                    donorName: { $first: '$donorName' },
+                    donorEmail: { $first: '$donorEmail' },
+                    lastDonationDate: { $max: '$createdAt' }
+                }
+            },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: '_id',
+                    foreignField: '_id',
+                    as: 'user'
+                }
+            },
+            {
+                $unwind: {
+                    path: '$user',
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $project: {
+                    _id: 1,
+                    totalDonated: 1,
+                    donationCount: 1,
+                    lastDonationDate: 1,
+                    donorName: { $ifNull: ['$user.name', '$donorName'] },
+                    donorEmail: { $ifNull: ['$user.email', '$donorEmail'] },
+                    profileImage: { $ifNull: ['$user.profileImage', ''] },
+                    role: '$user.role'
                 }
             },
             { $sort: { totalDonated: -1 } },
-            { $limit: 10 }
+            { $limit: 20 }
         ]);
 
-        res.status(200).json({ status: 'success', data: { leaderboard } });
+        // Calculate ranks and dynamic tier badges
+        const rankedLeaderboard = leaderboard.map((item, index) => {
+            let tier = 'Bronze Friend';
+            let tierIcon = '🥉';
+            let badgeClass = 'badge-bronze';
+
+            if (item.totalDonated >= 50000) {
+                tier = 'Diamond Champion';
+                tierIcon = '👑';
+                badgeClass = 'badge-diamond';
+            } else if (item.totalDonated >= 25000) {
+                tier = 'Platinum Guardian';
+                tierIcon = '💎';
+                badgeClass = 'badge-platinum';
+            } else if (item.totalDonated >= 10000) {
+                tier = 'Gold Benefactor';
+                tierIcon = '🥇';
+                badgeClass = 'badge-gold';
+            } else if (item.totalDonated >= 5000) {
+                tier = 'Silver Supporter';
+                tierIcon = '🥈';
+                badgeClass = 'badge-silver';
+            }
+
+            return {
+                ...item,
+                rank: index + 1,
+                tier,
+                tierIcon,
+                badgeClass
+            };
+        });
+
+        // Platform Summary Statistics for the Leaderboard Header
+        const statsAggregation = await Donation.aggregate([
+            { $match: { status: 'completed' } },
+            {
+                $group: {
+                    _id: null,
+                    totalRaised: { $sum: '$amount' },
+                    totalDonations: { $sum: 1 },
+                    uniqueDonors: { $addToSet: '$userId' }
+                }
+            }
+        ]);
+
+        const stats = statsAggregation.length > 0 ? {
+            totalRaised: statsAggregation[0].totalRaised,
+            totalDonations: statsAggregation[0].totalDonations,
+            totalDonors: statsAggregation[0].uniqueDonors.length
+        } : { totalRaised: 0, totalDonations: 0, totalDonors: 0 };
+
+        res.status(200).json({ 
+            status: 'success', 
+            data: { 
+                leaderboard: rankedLeaderboard,
+                stats 
+            } 
+        });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

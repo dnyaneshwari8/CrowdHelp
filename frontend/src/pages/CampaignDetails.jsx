@@ -42,8 +42,14 @@ const CampaignDetails = () => {
                 setCampaign(response.data.campaign);
                 
                 if (user) {
-                    const profile = await fetchUserProfile();
-                    setIsFav(profile.data.user.favorites.some(fav => String(fav._id) === id));
+                    try {
+                        const profile = await fetchUserProfile();
+                        if (profile?.data?.user?.favorites) {
+                            setIsFav(profile.data.user.favorites.some(fav => String(fav._id) === id));
+                        }
+                    } catch (favError) {
+                        console.warn('Could not load user favorite status:', favError.message);
+                    }
                 }
             } catch (error) {
                 console.error('Error loading details:', error);
@@ -123,7 +129,12 @@ const CampaignDetails = () => {
 
         } catch (error) {
             console.error('Donation error:', error);
-            alert('Failed to initiate donation');
+            if (error.response?.status === 401) {
+                alert('Your session has expired. Please log in again.');
+                navigate('/login');
+            } else {
+                alert(error.response?.data?.message || 'Failed to initiate donation');
+            }
             setDonating(false);
         }
     };

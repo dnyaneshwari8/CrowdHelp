@@ -50,7 +50,7 @@ function App() {
               {/* Public Routes */}
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
-              <Route path="/verify-otp" element={<OTPVerification />} />
+              <Route path="/otp-verification" element={<OTPVerification />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/campaigns" element={<Campaigns />} />
